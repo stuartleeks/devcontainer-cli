@@ -30,12 +30,15 @@ func main() {
 	rootCmd.AddCommand(cmdList)
 
 	cmdExec := &cobra.Command{
-		Use:   "exec DEVCONTAINER_NAME COMMAND",
+		Use:   "exec DEVCONTAINER_NAME COMMAND [args...]",
 		Short: "Execute a command in a devcontainer",
 		Long:  "Execute a command in a devcontainer, similar to `docker exec`.",
 		Run: func(cmd *cobra.Command, args []string) {
 			runExecCommand(cmd, args)
 		},
+		Args:                  cobra.ArbitraryArgs,
+		DisableFlagParsing:    true,
+		DisableFlagsInUseLine: true,
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			// only completing the first arg  (devcontainer name)
 			if len(args) != 0 {
@@ -120,7 +123,10 @@ func runListCommand(cmd *cobra.Command, args []string, listIncludeContainerNames
 func runExecCommand(cmd *cobra.Command, args []string) {
 	// TODO argument validation!
 
-	fmt.Printf("TODO - exec: %v\n", args)
+	if len(args) < 2 {
+		cmd.Usage()
+		os.Exit(1)
+	}
 
 	devcontainerName := args[0]
 	devcontainers, err := devcontainers.ListDevcontainers()
