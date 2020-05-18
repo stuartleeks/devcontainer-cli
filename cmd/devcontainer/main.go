@@ -14,9 +14,9 @@ func main() {
 	var listIncludeContainerNames bool
 	var listVerbose bool
 
-	var rootCmd = &cobra.Command{Use: "devcontainer"}
+	rootCmd := &cobra.Command{Use: "devcontainer"}
 
-	var cmdList = &cobra.Command{
+	cmdList := &cobra.Command{
 		Use:   "list",
 		Short: "List devcontainers",
 		Long:  "Lists devcontainers that are currently running",
@@ -26,8 +26,26 @@ func main() {
 	}
 	cmdList.Flags().BoolVar(&listIncludeContainerNames, "include-container-names", false, "Also include container names in the list")
 	cmdList.Flags().BoolVarP(&listVerbose, "verbose", "v", false, "Verbose output")
-
 	rootCmd.AddCommand(cmdList)
+
+	cmdCompletion := &cobra.Command{
+		Use:   "completion",
+		Short: "Generates bash completion scripts",
+		Long: `To load completion run
+	
+	. <(devcontainer completion)
+	
+	To configure your bash shell to load completions for each session add to your bashrc
+	
+	# ~/.bashrc or ~/.profile
+	. <(devcontainer completion)
+	`,
+		Run: func(cmd *cobra.Command, args []string) {
+			rootCmd.GenBashCompletion(os.Stdout)
+		},
+	}
+	rootCmd.AddCommand(cmdCompletion)
+
 	rootCmd.Execute()
 }
 
