@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"sort"
 	"text/tabwriter"
 
@@ -27,6 +28,34 @@ func main() {
 	cmdList.Flags().BoolVar(&listIncludeContainerNames, "include-container-names", false, "Also include container names in the list")
 	cmdList.Flags().BoolVarP(&listVerbose, "verbose", "v", false, "Verbose output")
 	rootCmd.AddCommand(cmdList)
+
+	cmdExec := &cobra.Command{
+		Use:   "exec DEVCONTAINER_NAME COMMAND",
+		Short: "Execute a command in a devcontainer",
+		Long:  "Execute a command in a devcontainer, similar to `docker exec`.",
+		Run: func(cmd *cobra.Command, args []string) {
+			runExecCommand(cmd, args)
+		},
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			// only completing the first arg  (devcontainer name)
+			if len(args) != 0 {
+				return nil, cobra.ShellCompDirectiveNoFileComp
+			}
+			devcontainers, err := devcontainers.ListDevcontainers()
+			if err != nil {
+				fmt.Printf("Error: %v", err)
+				os.Exit(1)
+			}
+			names := []string{}
+			for _, devcontainer := range devcontainers {
+				names = append(names, devcontainer.DevcontainerName)
+				names = append(names, devcontainer.ContainerName)
+			}
+			sort.Strings(names)
+			return names, cobra.ShellCompDirectiveNoFileComp
+		},
+	}
+	rootCmd.AddCommand(cmdExec)
 
 	cmdCompletion := &cobra.Command{
 		Use:   "completion",
@@ -78,14 +107,56 @@ func runListCommand(cmd *cobra.Command, args []string, listIncludeContainerNames
 	names := []string{}
 	for _, devcontainer := range devcontainers {
 		names = append(names, devcontainer.DevcontainerName)
-	}
-	if listIncludeContainerNames {
-		for _, devcontainer := range devcontainers {
+		if listIncludeContainerNames {
 			names = append(names, devcontainer.ContainerName)
 		}
 	}
 	sort.Strings(names)
 	for _, name := range names {
 		fmt.Println(name)
+	}
+}
+
+func runExecCommand(cmd *cobra.Command, args []string) {
+	// TODO argument validation!
+
+	fmt.Printf("TODO - exec: %v\n", args)
+
+	devcontainerName := args[0]
+	devcontainers, err := devcontainers.ListDevcontainers()
+	if err != nil {
+		fmt.Printf("Error: %v", err)
+		os.Exit(1)
+	}
+
+	containerID := ""
+	for _, devcontainer := range devcontainers {
+		if devcontainer.ContainerName == devcontainerName || devcontainer.DevcontainerName == devcontainerName {
+			containerID = devcontainer.ContainerID
+			break
+		}
+	}
+	if containerID == "" {
+		cmd.Usage()
+		if err != nil {
+			fmt.Printf("Error: %v", err)
+		}
+		os.Exit(1)
+	}
+
+	dockerArgs := []string{"exec", "-it", containerID}
+	dockerArgs = append(dockerArgs, args[1:]...)
+
+	dockerCmd := exec.Command("docker", dockerArgs...)
+	dockerCmd.Stdin = os.Stdin
+	dockerCmd.Stdout = os.Stdout
+
+	err = dockerCmd.Start()
+	if err != nil {
+		fmt.Printf("Exec: start error: %s\n", err)
+	}
+	err = dockerCmd.Wait()
+	if err != nil {
+		fmt.Printf("Exec: wait error: %s\n", err)
 	}
 }
