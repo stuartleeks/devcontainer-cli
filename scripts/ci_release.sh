@@ -18,6 +18,9 @@ else
   fi
 fi
 
+echo "git tags:"
+git tag --list
+echo
 
 if [ -z ${PUBLISH} ]; then
   echo "Running with --skip-publish as PUBLISH not set"
