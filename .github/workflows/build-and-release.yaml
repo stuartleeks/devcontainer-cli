@@ -1,4 +1,4 @@
-name: build
+name: build-and-release
 
 on:
   push:
@@ -19,5 +19,11 @@ jobs:
     - name: Build devcontainer for tooling
       run: sudo -E make devcontainer
 
-    - name: Run the build
-      run: sudo -E make devcontainer-build
+    - name: Run the release
+      run: sudo -E make devcontainer-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GHACTIONS_SECRET }}
+        BUILD_NUMBER: ${{ github.run_id }}
+        IS_CI: 1
+        IS_PR: ${{ github.head_ref }}
+        BRANCH: ${{ github.ref }}
