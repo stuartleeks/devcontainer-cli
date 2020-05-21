@@ -1,0 +1,23 @@
+name: build
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:  
+  build:
+    runs-on: ubuntu-18.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: CI Tooling
+      run: sudo apt update && sudo apt install build-essential -y
+    
+    - name: Build devcontainer for tooling
+      run: sudo -E make devcontainer
+
+    - name: Run the build
+      run: sudo -E make devcontainer-build

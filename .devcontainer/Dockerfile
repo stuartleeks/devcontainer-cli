@@ -31,6 +31,8 @@ ARG USERNAME=vscode
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
+# Set env for tracking that we're running in a devcontainer
+ENV DEVCONTAINER=true
 
 # Enable go modules
 ENV GO111MODULE=on
