@@ -47,6 +47,8 @@ RUN \
     && go get github.com/acroca/go-symbols@v0.1.1 && go get github.com/ramya-rao-a/go-outline@7182a932836a71948db4a81991a494751eccfe77 \
     # --> GolangCI-lint
     && curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sed 's/tar -/tar --no-same-owner -/g' | sh -s -- -b $(go env GOPATH)/bin \
+    # --> Go releaser 
+    && curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh -s -- "v0.132.1"\
     # --> Install junit converter
     && go get github.com/jstemmer/go-junit-report@v0.9.1 \
     && rm -rf /go/src/ && rm -rf /go/pkg
