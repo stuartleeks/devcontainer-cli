@@ -10,6 +10,7 @@ func main() {
 
 	rootCmd.AddCommand(createListCommand())
 	rootCmd.AddCommand(createExecCommand())
+	rootCmd.AddCommand(createTemplateCommand())
 	rootCmd.AddCommand(createCompleteCommand(rootCmd))
 
 	rootCmd.Execute()
