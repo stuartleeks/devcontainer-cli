@@ -10,6 +10,19 @@ import (
 // TODO - recursive copy folder (also add recursive symlink)
 
 func CopyFolder(source string, target string) error {
+	copy := func(sourceFolder string, targetFolder string, item os.FileInfo) error {
+		return CopyFile(sourceFolder+"/"+item.Name(), targetFolder+"/"+item.Name(), item.Mode())
+	}
+	return processFolder(source, target, copy)
+}
+func LinkFolder(source string, target string) error {
+	symlink := func(sourceFolder string, targetFolder string, item os.FileInfo) error {
+		return os.Symlink(sourceFolder+"/"+item.Name(), targetFolder+"/"+item.Name())
+	}
+	return processFolder(source, target, symlink)
+}
+
+func processFolder(source string, target string, fileHandler func(sourceFolder string, targetFolder string, item os.FileInfo) error) error {
 	sourceItem, err := os.Stat(source)
 	if err != nil {
 		return fmt.Errorf("Error reading source folder: %s\n", err)
@@ -25,13 +38,18 @@ func CopyFolder(source string, target string) error {
 
 	for _, sourceSubItem := range sourceSubItems {
 		if sourceSubItem.IsDir() {
-			CopyFolder(source+"/"+sourceSubItem.Name(), target+"/"+sourceSubItem.Name())
+			if err = processFolder(source+"/"+sourceSubItem.Name(), target+"/"+sourceSubItem.Name(), fileHandler); err != nil {
+				return err
+			}
 		} else {
-			CopyFile(source+"/"+sourceSubItem.Name(), target+"/"+sourceSubItem.Name(), sourceSubItem.Mode())
+			if err = fileHandler(source, target, sourceSubItem); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
+
 func CopyFile(source string, target string, perm os.FileMode) error {
 	sourceFile, err := os.Open(source)
 	if err != nil {
