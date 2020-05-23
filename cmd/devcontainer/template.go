@@ -19,6 +19,14 @@ func createTemplateCommand() *cobra.Command {
 }
 
 func createTemplateListCommand() *cobra.Command {
+	isDevcontainerFolder := func(parentPath string, fi os.FileInfo) bool {
+		if !fi.IsDir() {
+			return false
+		}
+		devcontainerJsonPath := fmt.Sprintf("%s/%s/.devcontainer/devcontainer.json", parentPath, fi.Name())
+		devContainerJsonInfo, err := os.Stat(devcontainerJsonPath)
+		return err == nil && !devContainerJsonInfo.IsDir()
+	}
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "list templates",
@@ -33,9 +41,8 @@ func createTemplateListCommand() *cobra.Command {
 				os.Exit(1)
 			}
 
-			fmt.Println("Listing subdir/parent")
 			for _, entry := range c {
-				if entry.IsDir() {
+				if isDevcontainerFolder(folder, entry) {
 					fmt.Println(entry.Name())
 				}
 			}
