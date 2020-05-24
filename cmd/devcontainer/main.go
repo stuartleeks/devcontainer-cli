@@ -12,6 +12,7 @@ func main() {
 	rootCmd.AddCommand(createExecCommand())
 	rootCmd.AddCommand(createTemplateCommand())
 	rootCmd.AddCommand(createCompleteCommand(rootCmd))
+	rootCmd.AddCommand(createConfigCommand())
 
 	rootCmd.Execute()
 }

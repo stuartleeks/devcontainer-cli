@@ -2,8 +2,10 @@ package devcontainers
 
 import (
 	"fmt"
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
 
 // DevcontainerTemplate holds info on templates for list/add etc
@@ -30,19 +32,30 @@ func GetTemplateByName(name string) (*DevcontainerTemplate, error) {
 
 // GetTemplates returns a list of discovered templates
 func GetTemplates() ([]DevcontainerTemplate, error) {
-	const containerFolder string = "$HOME/source/vscode-dev-containers/containers" // TODO - make configurable!
+	templates := []DevcontainerTemplate{}
+	folders := config.GetTemplateFolders()
+	for _, folder := range folders {
+		folder := os.ExpandEnv(folder)
+		newTemplates, err := getTemplatesFromFolder(folder)
+		if err != nil {
+			return []DevcontainerTemplate{}, err
+		}
+		templates = append(templates, newTemplates...)
+	}
+	return templates, nil
+}
 
+func getTemplatesFromFolder(folder string) ([]DevcontainerTemplate, error) {
 	isDevcontainerFolder := func(parentPath string, fi os.FileInfo) bool {
 		if !fi.IsDir() {
 			return false
 		}
-		devcontainerJsonPath := fmt.Sprintf("%s/%s/.devcontainer/devcontainer.json", parentPath, fi.Name())
+		devcontainerJsonPath := filepath.Join(parentPath, fi.Name(), ".devcontainer/devcontainer.json")
 		devContainerJsonInfo, err := os.Stat(devcontainerJsonPath)
 		return err == nil && !devContainerJsonInfo.IsDir()
 	}
-
-	folder := os.ExpandEnv(containerFolder)
 	c, err := ioutil.ReadDir(folder)
+
 	if err != nil {
 		return []DevcontainerTemplate{}, fmt.Errorf("Error reading devcontainer definitions: %s\n", err)
 	}
@@ -52,7 +65,7 @@ func GetTemplates() ([]DevcontainerTemplate, error) {
 		if isDevcontainerFolder(folder, entry) {
 			template := DevcontainerTemplate{
 				Name: entry.Name(),
-				Path: fmt.Sprintf("%s/%s/.devcontainer", folder, entry.Name()),
+				Path: filepath.Join(folder, entry.Name(), ".devcontainer"),
 			}
 			templates = append(templates, template)
 		}
