@@ -25,16 +25,18 @@ sudo -E ./install.sh
 To enable bash completion, add the following to you `~/.bashrc` file:
 
 ```bash
-. <(devcontainer completion)
+. <(devcontainer completion bash)
 ```
 
 ## Usage
 
-### Listing devcontainers
+### Working with devcontainers
+
+#### Listing devcontainers
 
 To see which running devcontainers the CLI detects you can run the `list` command.
 
-### Running commands inside a devcontainer
+#### Running commands inside a devcontainer
 
 `devcontainer` allows you to run commands in devcontainers. This is similar to `docker exec` but works with devcontainer names (rather than requiring container names/IDs). 
 
@@ -46,4 +48,56 @@ devcontainer exec vscode-remote-test-dockerfile bash
 
 # Run a command with args in the vscode-remote-test-dockercompose_devcontainer/mongo devcontainer
 devcontainer exec vscode-remote-test-dockercompose_devcontainer/mongo ls -a /workspaces/vscode-remote-test-dockerfile
+```
+
+### Working with devcontainer templates
+
+To work with devcontainer templates `devcontainer` needs to know where you have the templates stored.
+
+As a quickstart, clone the VS Code devcontainers repo: `git clone https://github.com/microsoft/vscode-dev-containers`
+
+Next, run `devcontainer config write` to save a config file and then open `~/.devcontainer-cli/devcontainer-cli.json` in your favourite editor.
+
+The starting configuration will look something like:
+
+```json
+{
+  "templatepaths": []
+}
+```
+
+Update to include the path to the `containers` folder in the `vscode-dev-containers` repo you just cloned:
+
+```json
+{
+  "templatepaths": ["$HOME/source/vscode-dev-containers/containers"]
+}
+```
+
+TODO: Add docs on the folder structure for adding custom templates
+
+#### Listing templates
+
+Running `devcontainer template list` will show the templates that `devcontainer` discovered
+
+#### Adding a devcontainer
+
+To add the files for a devcontainer definition to your project, change directory to the folder you want to add the devcontainer to and then run:
+
+```bash
+# Add the go template
+devcontainer template add go
+```
+
+This will copy in the template files for you to modify as you wish.
+
+#### Adding a link to a devcontainer
+
+If you are working with a codebase that you don't want to commit the devcontainer definition to (e.g. an OSS project that doesn't want a devcontainer definition), you can use the `template add-link` command. Instead of copying template files it creates symlinks to the template files and adds a `.gitignore` file to avoid accidental git commits.
+
+As with `template add`, run this from the folder you want to add the devcontainer to:
+
+```bash
+# Symlink to the go template
+devcontainer template add-link go
 ```
