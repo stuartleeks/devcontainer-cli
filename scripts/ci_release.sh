@@ -21,6 +21,8 @@ fi
 # Set version for release (picked up later by goreleaser)
 git tag -f v0.1.$BUILD_NUMBER
 
+export GOVERSION=$(go version)
+
 if [ -z ${PUBLISH} ]; then
   echo "Running with --skip-publish as PUBLISH not set"
   goreleaser --skip-publish --rm-dist
