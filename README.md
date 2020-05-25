@@ -2,9 +2,23 @@
 
 devcontainer-cli is the start of a CLI to improve the experience of working with [Visual Studio Code devcontainers](https://code.visualstudio.com/docs/remote/containers)
 
+**Status: this is a pet project that I've been experimenting with. It is not supported and you should expect bugs :-)**
+
 ## Installation
 
-TODO - add this once releases are automated!
+Head to the [latest release page](https://github.com/stuartleeks/devcontainer-cli/releases/latest) and download the archive for your platform.
+
+Extract `devcontainer` from the archive and place in a folder in your `PATH`.
+
+Or if you just don't care and are happy to run random scripts from the internet:
+
+```bash
+OS=linux # also darwin
+ARCH=amd64 # also 386
+wget https://raw.githubusercontent.com/stuartleeks/devcontainer-cli/master/scripts/install.sh
+chmod +x install.sh
+sudo -E ./install.sh
+```
 
 ## Enabling bash completion
 
