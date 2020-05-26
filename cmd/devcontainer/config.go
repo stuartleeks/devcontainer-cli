@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
@@ -22,14 +21,14 @@ func createConfigShowCommand() *cobra.Command {
 		Use:   "show",
 		Short: "show the current config",
 		Long:  "load the current config and print it out",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			c := config.GetAll()
 			jsonConfig, err := json.MarshalIndent(c, "", "  ")
 			if err != nil {
-				fmt.Printf("Error converting to JSON: %s\n", err)
-				os.Exit(1)
+				return fmt.Errorf("Error converting to JSON: %s\n", err)
 			}
 			fmt.Println(string(jsonConfig))
+			return nil
 		},
 	}
 	return cmd
@@ -39,12 +38,12 @@ func createConfigWriteCommand() *cobra.Command {
 		Use:   "write",
 		Short: "write config",
 		Long:  "Write out the config file to ~/.devcontainer-cli/devcontainer-cli.json",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := config.SaveConfig(); err != nil {
-				fmt.Printf("Error saving config: %s\n", err)
-			} else {
-				fmt.Println("Config saved")
+				return fmt.Errorf("Error saving config: %s\n", err)
 			}
+			fmt.Println("Config saved")
+			return nil
 		},
 	}
 	return cmd
