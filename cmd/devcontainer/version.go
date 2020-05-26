@@ -14,12 +14,13 @@ func createVersionCommand() *cobra.Command {
 		Use:   "version",
 		Short: "show version",
 		Long:  "Show version",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if verbose {
 				fmt.Printf("devcontainer version %s\nBuilt %s (commit %s)\n%s\n\n", version, date, commit, goversion)
-				return
+				return nil
 			}
 			fmt.Println(version)
+			return nil
 		},
 	}
 	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Verbose output")

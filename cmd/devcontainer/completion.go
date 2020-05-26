@@ -23,26 +23,28 @@ func createCompleteCommand(rootCmd *cobra.Command) *cobra.Command {
 	# ~/.bashrc or ~/.profile
 	. <(devcontainer completion)
 	`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
-				cmd.Usage()
+				_ = cmd.Usage()
 				os.Exit(1)
 			}
 			shell := args[0]
+			var err error
 			switch strings.ToLower(shell) {
 			case "bash":
-				rootCmd.GenBashCompletion(os.Stdout)
+				err = rootCmd.GenBashCompletion(os.Stdout)
 			case "fish":
-				rootCmd.GenFishCompletion(os.Stdout, true)
+				err = rootCmd.GenFishCompletion(os.Stdout, true)
 			case "powershell":
-				rootCmd.GenPowerShellCompletion(os.Stdout)
+				err = rootCmd.GenPowerShellCompletion(os.Stdout)
 			case "zsh":
-				rootCmd.GenPowerShellCompletion(os.Stdout)
+				err = rootCmd.GenZshCompletion(os.Stdout)
 			default:
 				fmt.Printf("Unsupported SHELL value: '%s'\n", shell)
-				cmd.Usage()
-				os.Exit(1)
+				return cmd.Usage()
 			}
+
+			return err
 		},
 	}
 	return cmd

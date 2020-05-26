@@ -18,15 +18,14 @@ func createListCommand() *cobra.Command {
 		Use:   "list",
 		Short: "List devcontainers",
 		Long:  "Lists running devcontainers",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if listIncludeContainerNames && listVerbose {
 				fmt.Println("Can't use both verbose and include-container-names")
 				os.Exit(1)
 			}
 			devcontainers, err := devcontainers.ListDevcontainers()
 			if err != nil {
-				fmt.Printf("Error: %v", err)
-				os.Exit(1)
+				return err
 			}
 			if listVerbose {
 				sort.Slice(devcontainers, func(i, j int) bool { return devcontainers[i].DevcontainerName < devcontainers[j].DevcontainerName })
@@ -42,7 +41,7 @@ func createListCommand() *cobra.Command {
 				for _, devcontainer := range devcontainers {
 					fmt.Fprintf(w, "%s\t%s\n", devcontainer.DevcontainerName, devcontainer.ContainerName)
 				}
-				return
+				return nil
 			}
 			names := []string{}
 			for _, devcontainer := range devcontainers {
@@ -55,6 +54,7 @@ func createListCommand() *cobra.Command {
 			for _, name := range names {
 				fmt.Println(name)
 			}
+			return nil
 		},
 	}
 	cmdList.Flags().BoolVar(&listIncludeContainerNames, "include-container-names", false, "Also include container names in the list")
@@ -67,18 +67,16 @@ func createExecCommand() *cobra.Command {
 		Use:   "exec DEVCONTAINER_NAME COMMAND [args...]",
 		Short: "Execute a command in a devcontainer",
 		Long:  "Execute a command in a devcontainer, similar to `docker exec`.",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if len(args) < 2 {
-				cmd.Usage()
-				os.Exit(1)
+				return cmd.Usage()
 			}
 
 			devcontainerName := args[0]
 			devcontainers, err := devcontainers.ListDevcontainers()
 			if err != nil {
-				fmt.Printf("Error: %v", err)
-				os.Exit(1)
+				return err
 			}
 
 			containerID := ""
@@ -89,11 +87,7 @@ func createExecCommand() *cobra.Command {
 				}
 			}
 			if containerID == "" {
-				cmd.Usage()
-				if err != nil {
-					fmt.Printf("Error: %v", err)
-				}
-				os.Exit(1)
+				return cmd.Usage()
 			}
 
 			dockerArgs := []string{"exec", "-it", containerID}
@@ -105,12 +99,13 @@ func createExecCommand() *cobra.Command {
 
 			err = dockerCmd.Start()
 			if err != nil {
-				fmt.Printf("Exec: start error: %s\n", err)
+				return fmt.Errorf("Exec: start error: %s\n", err)
 			}
 			err = dockerCmd.Wait()
 			if err != nil {
-				fmt.Printf("Exec: wait error: %s\n", err)
+				return fmt.Errorf("Exec: wait error: %s\n", err)
 			}
+			return nil
 		},
 		Args:                  cobra.ArbitraryArgs,
 		DisableFlagParsing:    true,

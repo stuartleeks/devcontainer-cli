@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
@@ -23,22 +22,21 @@ func createUpdateCommand() *cobra.Command {
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// do nothing - suppress root PersistentPreRun which does periodic update check
 		},
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			latest, err := update.CheckForUpdate(version)
 			if err != nil {
-				log.Println("Error occurred while checking for updates:", err)
-				return
+				return fmt.Errorf("Error occurred while checking for updates: %v", err)
 			}
 
 			if latest == nil {
 				fmt.Println("No updates available")
-				return
+				return nil
 			}
 
 			fmt.Printf("\n\n UPDATE AVAILABLE: %s \n \n Release notes: %s\n", latest.Version, latest.ReleaseNotes)
 
 			if checkOnly {
-				return
+				return nil
 			}
 
 			fmt.Print("Do you want to update? (y/n): ")
@@ -46,20 +44,20 @@ func createUpdateCommand() *cobra.Command {
 				input, err := bufio.NewReader(os.Stdin).ReadString('\n')
 				if err != nil || (input != "y\n" && input != "y\r\n") {
 					// error or something other than `y`
-					return
+					return err
 				}
 			}
 			fmt.Println("Applying...")
 
 			exe, err := os.Executable()
 			if err != nil {
-				log.Panicln("Could not locate executable path")
+				return fmt.Errorf("Could not locate executable path: %v", err)
 			}
 			if err := selfupdate.UpdateTo(latest.AssetURL, exe); err != nil {
-				log.Panicln("Error occurred while updating binary:", err)
+				return fmt.Errorf("Error occurred while updating binary: %v", err)
 			}
-			log.Println("Successfully updated to version", latest.Version)
-
+			fmt.Printf("Successfully updated to version %s\n", latest.Version)
+			return nil
 		},
 	}
 	cmd.Flags().BoolVar(&checkOnly, "check-only", false, "Check for an update without applying")

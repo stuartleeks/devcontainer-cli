@@ -1,6 +1,9 @@
 build:
 	go build ./cmd/devcontainer
 
+lint: build
+	golangci-lint run
+
 devcontainer:
 	docker build -f ./.devcontainer/Dockerfile ./.devcontainer -t devcontainer-cli
 

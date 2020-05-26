@@ -23,6 +23,8 @@ git tag -f v0.1.$BUILD_NUMBER
 
 export GOVERSION=$(go version)
 
+make lint
+
 if [ -z ${PUBLISH} ]; then
   echo "Running with --skip-publish as PUBLISH not set"
   goreleaser --skip-publish --rm-dist

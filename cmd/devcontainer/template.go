@@ -29,17 +29,17 @@ func createTemplateListCommand() *cobra.Command {
 		Use:   "list",
 		Short: "list templates",
 		Long:  "List devcontainer templates",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 
 			templates, err := devcontainers.GetTemplates()
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				return err
 			}
 
 			for _, template := range templates {
 				fmt.Println(template.Name)
 			}
+			return nil
 		},
 	}
 	return cmd
@@ -50,18 +50,16 @@ func createTemplateAddCommand() *cobra.Command {
 		Use:   "add TEMPLATE_NAME",
 		Short: "add devcontainer from template",
 		Long:  "Add a devcontainer definition to the current folder using the specified template",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if len(args) != 1 {
-				cmd.Usage()
-				os.Exit(1)
+				return cmd.Usage()
 			}
 			name := args[0]
 
 			template, err := devcontainers.GetTemplateByName(name)
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				return err
 			}
 			if template == nil {
 				fmt.Printf("Template '%s' not found\n", name)
@@ -69,18 +67,17 @@ func createTemplateAddCommand() *cobra.Command {
 
 			info, err := os.Stat("./.devcontainer")
 			if info != nil && err == nil {
-				fmt.Println("Current folder already contains a .devcontainer folder - exiting")
-				os.Exit(1)
+				return fmt.Errorf("Current folder already contains a .devcontainer folder - exiting")
 			}
 
 			currentDirectory, err := os.Getwd()
 			if err != nil {
-				fmt.Printf("Error reading current directory: %s\n", err)
+				return fmt.Errorf("Error reading current directory: %s\n", err)
 			}
 			if err = ioutil2.CopyFolder(template.Path, currentDirectory+"/.devcontainer"); err != nil {
-				fmt.Printf("Error copying folder: %s\n", err)
-				os.Exit(1)
+				return fmt.Errorf("Error copying folder: %s\n", err)
 			}
+			return err
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			// only completing the first arg  (template name)
@@ -108,43 +105,39 @@ func createTemplateAddLinkCommand() *cobra.Command {
 		Use:   "add-link TEMPLATE_NAME",
 		Short: "add-link devcontainer from template",
 		Long:  "Symlink a devcontainer definition to the current folder using the specified template",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if len(args) != 1 {
-				cmd.Usage()
-				os.Exit(1)
+				return cmd.Usage()
 			}
 			name := args[0]
 
 			template, err := devcontainers.GetTemplateByName(name)
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				return err
 			}
 			if template == nil {
-				fmt.Printf("Template '%s' not found\n", name)
+				return fmt.Errorf("Template '%s' not found\n", name)
 			}
 
 			info, err := os.Stat("./.devcontainer")
 			if info != nil && err == nil {
-				fmt.Println("Current folder already contains a .devcontainer folder - exiting")
-				os.Exit(1)
+				return fmt.Errorf("Current folder already contains a .devcontainer folder - exiting")
 			}
 
 			currentDirectory, err := os.Getwd()
 			if err != nil {
-				fmt.Printf("Error reading current directory: %s\n", err)
+				return fmt.Errorf("Error reading current directory: %s\n", err)
 			}
 			if err = ioutil2.LinkFolder(template.Path, currentDirectory+"/.devcontainer"); err != nil {
-				fmt.Printf("Error linking folder: %s\n", err)
-				os.Exit(1)
+				return fmt.Errorf("Error linking folder: %s\n", err)
 			}
 
 			content := []byte("*\n")
 			if err := ioutil.WriteFile(currentDirectory+"/.devcontainer/.gitignore", content, 0644); err != nil { // -rw-r--r--
-				fmt.Printf("Error writing .gitignore: %s\n", err)
-				os.Exit(1)
+				return fmt.Errorf("Error writing .gitignore: %s\n", err)
 			}
+			return err
 		},
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			// only completing the first arg  (template name)

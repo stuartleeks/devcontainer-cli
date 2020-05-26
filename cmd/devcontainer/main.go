@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/update"
 )
@@ -30,5 +33,9 @@ func main() {
 	rootCmd.AddCommand(createUpdateCommand())
 	rootCmd.AddCommand(createVersionCommand())
 
-	rootCmd.Execute()
+	err := rootCmd.Execute()
+	if err != nil {
+		fmt.Printf("Error running command:\n\t%s\n", err)
+		os.Exit(1)
+	}
 }
