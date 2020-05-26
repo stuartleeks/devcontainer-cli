@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"sort"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/devcontainers"
@@ -24,7 +25,7 @@ func createTemplateCommand() *cobra.Command {
 }
 
 func createTemplateListCommand() *cobra.Command {
-
+	var listVerbose bool
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "list templates",
@@ -36,12 +37,28 @@ func createTemplateListCommand() *cobra.Command {
 				return err
 			}
 
+			if listVerbose {
+				w := new(tabwriter.Writer)
+				// minwidth, tabwidth, padding, padchar, flags
+				w.Init(os.Stdout, 8, 8, 0, '\t', 0)
+				defer w.Flush()
+
+				fmt.Fprintf(w, "%s\t%s\n", "TEMPLATE NAME", "PATH")
+				fmt.Fprintf(w, "%s\t%s\n", "-------------", "----")
+
+				for _, template := range templates {
+					fmt.Fprintf(w, "%s\t%s\n", template.Name, template.Path)
+				}
+				return nil
+			}
+
 			for _, template := range templates {
 				fmt.Println(template.Name)
 			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVarP(&listVerbose, "verbose", "v", false, "Verbose output")
 	return cmd
 }
 
