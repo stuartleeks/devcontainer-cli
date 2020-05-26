@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -42,6 +43,14 @@ func getConfigPath() string {
 func GetTemplateFolders() []string {
 	EnsureInitialised()
 	return viper.GetStringSlice("templatePaths")
+}
+func GetLastUpdateCheck() time.Time {
+	EnsureInitialised()
+	return viper.GetTime("lastUpdateCheck")
+}
+func SetLastUpdateCheck(t time.Time) {
+	EnsureInitialised()
+	viper.Set("lastUpdateCheck", t)
 }
 func GetAll() map[string]interface{} {
 	EnsureInitialised()
