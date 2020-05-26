@@ -2,10 +2,12 @@ package devcontainers
 
 import (
 	"fmt"
-	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/errors"
 )
 
 // DevcontainerTemplate holds info on templates for list/add etc
@@ -34,6 +36,9 @@ func GetTemplateByName(name string) (*DevcontainerTemplate, error) {
 func GetTemplates() ([]DevcontainerTemplate, error) {
 	templates := []DevcontainerTemplate{}
 	folders := config.GetTemplateFolders()
+	if len(folders) == 0 {
+		return []DevcontainerTemplate{}, &errors.StatusError{Message: "No template folders configured - see https://github.com/stuartleeks/devcontainer-cli/#working-with-devcontainer-templates"}
+	}
 	for _, folder := range folders {
 		folder := os.ExpandEnv(folder)
 		newTemplates, err := getTemplatesFromFolder(folder)

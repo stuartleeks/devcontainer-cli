@@ -86,7 +86,6 @@ func createTemplateAddCommand() *cobra.Command {
 			}
 			templates, err := devcontainers.GetTemplates()
 			if err != nil {
-				fmt.Printf("Error: %v", err)
 				os.Exit(1)
 			}
 			names := []string{}
@@ -146,7 +145,6 @@ func createTemplateAddLinkCommand() *cobra.Command {
 			}
 			templates, err := devcontainers.GetTemplates()
 			if err != nil {
-				fmt.Printf("Error: %v", err)
 				os.Exit(1)
 			}
 			names := []string{}
