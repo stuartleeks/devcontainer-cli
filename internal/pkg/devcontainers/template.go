@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/errors"
@@ -35,6 +36,8 @@ func GetTemplateByName(name string) (*DevcontainerTemplate, error) {
 // GetTemplates returns a list of discovered templates
 func GetTemplates() ([]DevcontainerTemplate, error) {
 	templates := []DevcontainerTemplate{}
+	templateNames := map[string]bool{}
+
 	folders := config.GetTemplateFolders()
 	if len(folders) == 0 {
 		return []DevcontainerTemplate{}, &errors.StatusError{Message: "No template folders configured - see https://github.com/stuartleeks/devcontainer-cli/#working-with-devcontainer-templates"}
@@ -45,8 +48,14 @@ func GetTemplates() ([]DevcontainerTemplate, error) {
 		if err != nil {
 			return []DevcontainerTemplate{}, err
 		}
-		templates = append(templates, newTemplates...)
+		for _, template := range newTemplates {
+			if !templateNames[template.Name] {
+				templateNames[template.Name] = true
+				templates = append(templates, template)
+			}
+		}
 	}
+	sort.Slice(templates, func(i int, j int) bool { return templates[i].Name < templates[j].Name })
 	return templates, nil
 }
 
