@@ -38,7 +38,7 @@ To see which running devcontainers the CLI detects you can run the `list` comman
 
 #### Running commands inside a devcontainer
 
-`devcontainer` allows you to run commands in devcontainers. This is similar to `docker exec` but works with devcontainer names (rather than requiring container names/IDs). 
+`devcontainer` allows you to run commands in devcontainers. This is similar to `docker exec` but works with devcontainer names (rather than requiring container names/IDs).
 
 For example:
 
@@ -74,7 +74,7 @@ Update to include the path to the `containers` folder in the `vscode-dev-contain
 }
 ```
 
-TODO: Add docs on the folder structure for adding custom templates
+See [Template Paths](#template-paths) for more details of the structure of template folders.
 
 #### Listing templates
 
@@ -100,4 +100,33 @@ As with `template add`, run this from the folder you want to add the devcontaine
 ```bash
 # Symlink to the go template
 devcontainer template add-link go
+```
+
+## Template paths
+
+`devcontainer` can be [configured to scan multiple folders](#working-with-devcontainer-templates) to find templates. It is designed to work with folders structured in the same was as the [containers from in github.com/microsoft/vscode-dev-containers](https://github.com/microsoft/vscode-dev-containers/tree/master/containers).
+
+Assuming you cloned [github.com/microsoft/vscode-dev-containers/](https://github.com/microsoft/vscode-dev-containers/) into your `~/source/` folder and set up a custom devcontainer folder in `~/source/devcontainers` then you can configure your template paths as shown below. The sub-folder names are used as the template name and when duplicates are found the first matching folder is taken, so in the example below the `~/source/devcontainers` templates take precedence.
+
+```json
+{
+  "templatepaths": [
+    "$HOME/source/devcontainers",
+    "$HOME/source/vscode-dev-containers/containers"
+  ]
+}
+```
+
+The structure for these template paths is shown in the following tree structure:
+
+```misc
+template-collection-folder
+ |-template1
+ |  |-.devcontainer
+ |  |  |-devcontainer.json
+ |  |  |-Dockerfile
+ |  |  |-<other content for the template>
+ |-misc-folder
+ |-<misc content that is ignored as there is no .devcontainer folder>
+ |-<README or other files that are ignore>
 ```
