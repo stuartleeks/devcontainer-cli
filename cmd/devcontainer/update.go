@@ -6,9 +6,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/blang/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
 	"github.com/spf13/cobra"
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/update"
 )
 
 func createUpdateCommand() *cobra.Command {
@@ -20,19 +20,18 @@ func createUpdateCommand() *cobra.Command {
 		Use:   "update",
 		Short: "update cli",
 		Long:  "Apply the latest update",
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// do nothing - suppress root PersistentPreRun which does periodic update check
+		},
 		Run: func(cmd *cobra.Command, args []string) {
-			latest, found, err := selfupdate.DetectLatest("stuartleeks/devcontainer-cli")
+			latest, err := update.CheckForUpdate(version)
 			if err != nil {
-				log.Println("Error occurred while detecting version:", err)
+				log.Println("Error occurred while checking for updates:", err)
 				return
 			}
 
-			v, err := semver.Parse(version)
-			if err != nil {
-				log.Panicln(err.Error())
-			}
-			if !found || latest.Version.LTE(v) {
-				log.Println("Current version is the latest")
+			if latest == nil {
+				fmt.Println("No updates available")
 				return
 			}
 

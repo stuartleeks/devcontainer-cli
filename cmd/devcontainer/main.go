@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/update"
 )
 
 // Overridden via ldflags
@@ -14,7 +15,12 @@ var (
 
 func main() {
 
-	rootCmd := &cobra.Command{Use: "devcontainer"}
+	rootCmd := &cobra.Command{
+		Use: "devcontainer",
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			update.PeriodicCheckForUpdate(version)
+		},
+	}
 
 	rootCmd.AddCommand(createCompleteCommand(rootCmd))
 	rootCmd.AddCommand(createConfigCommand())
