@@ -36,7 +36,13 @@ func createUpdateCommand() *cobra.Command {
 				return
 			}
 
-			fmt.Print("\n\n UPDATE AVAILABLE \n \n Release notes: "+latest.ReleaseNotes+" \n Do you want to update to: ", latest.Version, "? (y/n): ")
+			fmt.Printf("\n\n UPDATE AVAILABLE: %s \n \n Release notes: %s\n", latest.Version, latest.ReleaseNotes)
+
+			if checkOnly {
+				return
+			}
+
+			fmt.Print("Do you want to update? (y/n): ")
 			if !yes {
 				input, err := bufio.NewReader(os.Stdin).ReadString('\n')
 				if err != nil || (input != "y\n" && input != "y\r\n") {
@@ -58,7 +64,7 @@ func createUpdateCommand() *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&checkOnly, "check-only", false, "Check for an update without applying")
-	cmd.Flags().BoolVarP(&checkOnly, "yes", "y", false, "Automatically apply any updates (i.e. answer yes) ")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Automatically apply any updates (i.e. answer yes) ")
 
 	return cmd
 }
