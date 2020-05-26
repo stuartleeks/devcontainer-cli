@@ -117,7 +117,6 @@ func createExecCommand() *cobra.Command {
 			}
 			devcontainers, err := devcontainers.ListDevcontainers()
 			if err != nil {
-				fmt.Printf("Error: %v", err)
 				os.Exit(1)
 			}
 			names := []string{}
