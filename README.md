@@ -15,7 +15,7 @@ Or if you just don't care and are happy to run random scripts from the internet:
 ```bash
 OS=linux # also darwin
 ARCH=amd64 # also 386
-wget https://raw.githubusercontent.com/stuartleeks/devcontainer-cli/master/scripts/install.sh
+wget https://raw.githubusercontent.com/stuartleeks/devcontainer-cli/main/scripts/install.sh
 chmod +x install.sh
 sudo -E ./install.sh
 ```
