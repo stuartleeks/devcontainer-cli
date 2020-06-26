@@ -50,6 +50,17 @@ devcontainer exec vscode-remote-test-dockerfile bash
 devcontainer exec vscode-remote-test-dockercompose_devcontainer/mongo ls -a /workspaces/vscode-remote-test-dockerfile
 ```
 
+You can pass `?` as the devcontainer name and the CLI will prompt you to pick a devcontainer to run the `exec` command against, e.g.:
+
+```bash
+$ ./devcontainer exec ? bash
+Specify the devcontainer to use:
+   0: devcontainer-cli (festive_saha)
+   1: vscode-remote-test-dockerfile (fervent_gopher)
+0
+```
+
+
 ### Working with devcontainer templates
 
 To work with devcontainer templates `devcontainer` needs to know where you have the templates stored.
