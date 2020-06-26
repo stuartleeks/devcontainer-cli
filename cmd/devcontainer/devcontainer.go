@@ -136,7 +136,6 @@ func createExecCommand() *cobra.Command {
 			names := []string{}
 			for _, devcontainer := range devcontainers {
 				names = append(names, devcontainer.DevcontainerName)
-				names = append(names, devcontainer.ContainerName)
 			}
 			sort.Strings(names)
 			return names, cobra.ShellCompDirectiveNoFileComp
