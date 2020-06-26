@@ -66,7 +66,7 @@ func createExecCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "exec DEVCONTAINER_NAME COMMAND [args...]",
 		Short: "Execute a command in a devcontainer",
-		Long:  "Execute a command in a devcontainer, similar to `docker exec`.",
+		Long:  "Execute a command in a devcontainer, similar to `docker exec`. Pass `?` as DEVCONTAINER_NAME to be prompted.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if len(args) < 2 {
@@ -80,14 +80,28 @@ func createExecCommand() *cobra.Command {
 			}
 
 			containerID := ""
-			for _, devcontainer := range devcontainers {
-				if devcontainer.ContainerName == devcontainerName || devcontainer.DevcontainerName == devcontainerName {
-					containerID = devcontainer.ContainerID
-					break
+			if devcontainerName == "?" {
+				// prompt user
+				fmt.Println("Specify the devcontainer to use:")
+				for index, devcontainer := range devcontainers {
+					fmt.Printf("%4d: %s (%s)\n", index, devcontainer.DevcontainerName, devcontainer.ContainerName)
 				}
-			}
-			if containerID == "" {
-				return cmd.Usage()
+				selection := -1
+				_, _ = fmt.Scanf("%d", &selection)
+				if selection < 0 || selection >= len(devcontainers) {
+					return fmt.Errorf("Invalid option")
+				}
+				containerID = devcontainers[selection].ContainerID
+			} else {
+				for _, devcontainer := range devcontainers {
+					if devcontainer.ContainerName == devcontainerName || devcontainer.DevcontainerName == devcontainerName {
+						containerID = devcontainer.ContainerID
+						break
+					}
+				}
+				if containerID == "" {
+					return cmd.Usage()
+				}
 			}
 
 			dockerArgs := []string{"exec", "-it", containerID}
