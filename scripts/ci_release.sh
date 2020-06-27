@@ -10,11 +10,11 @@ fi
 if [ -z ${IS_CI} ]; then
   echo "Not running in CI, skipping CI setup"
 else
-  if [ -z $IS_PR ] && [[ $BRANCH == "refs/heads/master" ]]; then
-    echo "On master setting PUBLISH=true"
+  if [ -z $IS_PR ] && [[ $BRANCH == "refs/heads/main" ]]; then
+    echo "On main setting PUBLISH=true"
     export PUBLISH=true
   else
-    echo "Skipping publish as is from PR: $PR_NUMBER or not 'refs/heads/master' BRANCH: $BRANCH"
+    echo "Skipping publish as is from PR: $PR_NUMBER or not 'refs/heads/main' BRANCH: $BRANCH"
   fi
 fi
 

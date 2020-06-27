@@ -115,7 +115,7 @@ devcontainer template add-link go
 
 ## Template paths
 
-`devcontainer` can be [configured to scan multiple folders](#working-with-devcontainer-templates) to find templates. It is designed to work with folders structured in the same was as the [containers from in github.com/microsoft/vscode-dev-containers](https://github.com/microsoft/vscode-dev-containers/tree/master/containers).
+`devcontainer` can be [configured to scan multiple folders](#working-with-devcontainer-templates) to find templates. It is designed to work with folders structured in the same was as the [containers from in github.com/microsoft/vscode-dev-containers](https://github.com/microsoft/vscode-dev-containers/tree/main/containers).
 
 Assuming you cloned [github.com/microsoft/vscode-dev-containers/](https://github.com/microsoft/vscode-dev-containers/) into your `~/source/` folder and set up a custom devcontainer folder in `~/source/devcontainers` then you can configure your template paths as shown below. The sub-folder names are used as the template name and when duplicates are found the first matching folder is taken, so in the example below the `~/source/devcontainers` templates take precedence.
 
