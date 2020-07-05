@@ -7,4 +7,6 @@ require (
 	github.com/rhysd/go-github-selfupdate v1.2.2
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/viper v1.4.0
+	github.com/nats-io/nats.go v1.8.1
+	github.com/stretchr/testify v1.2.2
 )

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/viper"
@@ -33,11 +34,14 @@ func EnsureInitialised() {
 	}
 }
 func getConfigPath() string {
+	var path string
 	if os.Getenv("HOME") != "" {
-		return "$HOME/.devcontainer-cli/"
+		path = filepath.Join("$HOME", ".devcontainer-cli/")
+	} else {
+		// if HOME not set, assume Windows and use USERPROFILE env var
+		path = filepath.Join("$USERPROFILE", ".devcontainer-cli/")
 	}
-	// if HOME not set, assume Windows and use USERPROFILE env var
-	return "$USERPROFILE/.devcontainer-cli/"
+	return os.ExpandEnv(path)
 }
 
 func GetTemplateFolders() []string {

@@ -28,6 +28,8 @@ func main() {
 	rootCmd.AddCommand(createListCommand())
 	rootCmd.AddCommand(createTemplateCommand())
 	rootCmd.AddCommand(createUpdateCommand())
+	rootCmd.AddCommand(createOpenInCodeCommand())
+	rootCmd.AddCommand(createOpenInCodeInsidersCommand())
 	rootCmd.AddCommand(createVersionCommand())
 
 	_ = rootCmd.Execute()

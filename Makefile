@@ -21,3 +21,7 @@ endif
 		--workdir "${PWD}" \
 		devcontainer-cli \
 		-c "${PWD}/scripts/ci_release.sh"
+
+
+test:
+	go test -v ./...
