@@ -50,5 +50,5 @@ func PeriodicCheckForUpdate(currentVersion string) {
 	}
 
 	fmt.Printf("\n\n UPDATE AVAILABLE: %s \n \n Release notes: %s\n", latest.Version, latest.ReleaseNotes)
-	fmt.Printf("Run `devcontainer udpate` to apply the update\n\n")
+	fmt.Printf("Run `devcontainer update` to apply the update\n\n")
 }
