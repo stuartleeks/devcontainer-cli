@@ -68,5 +68,6 @@ func SaveConfig() error {
 	if err := os.MkdirAll(configPath, 0755); err != nil {
 		return err
 	}
-	return viper.WriteConfigAs("/home/stuart/.devcontainer-cli/devcontainer-cli.json")
+	configFilePath:=filepath.Join(configPath, "devcontainer-cli.json")
+	return viper.WriteConfigAs(configFilePath)
 }
