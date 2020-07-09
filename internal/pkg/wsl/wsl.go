@@ -19,7 +19,18 @@ func ConvertWslPathToWindowsPath(path string) (string, error) {
 
 	buf, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("Error running wslpath: %s", err)
+		return "", fmt.Errorf("Error running wslpath (for %q): %s", path, err)
+	}
+	return strings.TrimSpace(string(buf)), nil
+}
+
+// ConvertWslPathToWindowsPath converts a WSL path to the corresponding \\wsl$\... path for access from Windows
+func ConvertWindowsPathToWslPath(path string) (string, error) {
+	cmd := exec.Command("wslpath", "-u", path)
+
+	buf, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("Error running wslpath (for %q): %s", path, err)
 	}
 	return strings.TrimSpace(string(buf)), nil
 }

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/wsl"
 )
@@ -28,7 +29,7 @@ func GetDevContainerURI(folderPath string) (string, error) {
 	}
 
 	launchPathHex := convertToHexString(launchPath)
-	workspaceMountPath, err := getWorkspaceMountPath(absPath)
+	workspaceMountPath, err := GetWorkspaceMountPath(absPath)
 	if err != nil {
 		return "", err
 	}
@@ -41,13 +42,20 @@ func convertToHexString(input string) string {
 	return hex.EncodeToString([]byte(input))
 }
 
-// TODO: add tests (and implementation) to handle JSON parsing with comments
-// Current implementation doesn't handle
-//  - block comments
-//  - the value split on a new line from the property name
-
-func getWorkspaceMountPath(folderPath string) (string, error) {
+// GetWorkspaceMountPath returns the devcontainer mount path for the devcontainer in the specified folder
+func GetWorkspaceMountPath(folderPath string) (string, error) {
 	// TODO - consider how to support repository-containers (https://github.com/microsoft/vscode-remote-release/issues/3218)
+
+	// If we're called from WSL we want a WSL Path but will also handle a Windows Path
+	if wsl.IsWsl() {
+		if strings.HasPrefix(folderPath, "\\\\wsl$\\") {
+			convertedPath, err := wsl.ConvertWindowsPathToWslPath(folderPath)
+			if err != nil {
+				return "", err
+			}
+			folderPath = convertedPath
+		}
+	}
 
 	devcontainerDefinitionPath := filepath.Join(folderPath, ".devcontainer/devcontainer.json")
 	buf, err := ioutil.ReadFile(devcontainerDefinitionPath)
@@ -67,6 +75,11 @@ func getWorkspaceMountPath(folderPath string) (string, error) {
 	_, folderName := filepath.Split(folderPath)
 	return fmt.Sprintf("/workspaces/%s", folderName), nil
 }
+
+// TODO: add tests (and implementation) to handle JSON parsing with comments
+// Current implementation doesn't handle
+//  - block comments
+//  - the value split on a new line from the property name
 
 func getWorkspaceMountPathFromDevcontainerDefinition(definition []byte) (string, error) {
 	r, err := regexp.Compile("(?m)^\\s*\"workspaceFolder\"\\s*:\\s*\"(.*)\"")

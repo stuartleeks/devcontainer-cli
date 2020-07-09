@@ -22,13 +22,15 @@ type DevcontainerInfo struct {
 }
 
 const (
-	ListPartID                     int = 0
-	ListPartLocalFolder            int = 1
-	ListPartComposeProject         int = 2
-	ListPartComposeService         int = 3
-	ListPartComposeContainerNumber int = 4
-	ListPartContainerName          int = 5
+	listPartID                     int = 0
+	listPartLocalFolder            int = 1
+	listPartComposeProject         int = 2
+	listPartComposeService         int = 3
+	listPartComposeContainerNumber int = 4
+	listPartContainerName          int = 5
 )
+
+var _ = listPartComposeContainerNumber
 
 // ListDevcontainers returns a list of devcontainers
 func ListDevcontainers() ([]DevcontainerInfo, error) {
@@ -48,10 +50,10 @@ func ListDevcontainers() ([]DevcontainerInfo, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := strings.Split(line, "|")
-		name := parts[ListPartLocalFolder]
+		name := parts[listPartLocalFolder]
 		if name == "" {
 			// No local folder => use dockercompose parts
-			name = fmt.Sprintf("%s/%s", parts[ListPartComposeProject], parts[ListPartComposeService])
+			name = fmt.Sprintf("%s/%s", parts[listPartComposeProject], parts[listPartComposeService])
 		} else {
 			// get the last path segment for the name
 			if index := strings.LastIndexAny(name, "/\\"); index >= 0 {
@@ -59,11 +61,25 @@ func ListDevcontainers() ([]DevcontainerInfo, error) {
 			}
 		}
 		devcontainer := DevcontainerInfo{
-			ContainerID:      parts[ListPartID],
-			ContainerName:    parts[ListPartContainerName],
+			ContainerID:      parts[listPartID],
+			ContainerName:    parts[listPartContainerName],
 			DevcontainerName: name,
 		}
 		devcontainers = append(devcontainers, devcontainer)
 	}
 	return devcontainers, nil
+}
+
+// GetLocalFolderFromDevContainer looks up the local (host) folder name from the container labels
+func GetLocalFolderFromDevContainer(containerIDOrName string) (string, error) {
+	//docker inspect cool_goldberg --format '{{ index .Config.Labels "vsch.local.folder" }}'
+
+	cmd := exec.Command("docker", "inspect", containerIDOrName, "--format", "{{ index .Config.Labels \"vsch.local.folder\" }}")
+
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("Failed to read docker stdout: %v", err)
+	}
+
+	return strings.TrimSpace(string(output)), nil
 }
