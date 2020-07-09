@@ -25,7 +25,14 @@ sudo -E ./install.sh
 To enable bash completion, add the following to you `~/.bashrc` file:
 
 ```bash
-. <(devcontainer completion bash)
+source <(devcontainer completion bash)
+```
+
+Or to alias `devcontainer` (to `dc` in this example):
+
+```bash
+alias dc=devcontainer
+source <(devcontainer completion bash | sed s/devcontainer/dc/g)
 ```
 
 ## Usage
@@ -60,6 +67,16 @@ Specify the devcontainer to use:
 0
 ```
 
+You can use this with Windows Terminal profiles:
+
+```json
+{
+    "guid": "{4b304185-99d2-493c-940c-ae74e0f14bba}",
+    "hidden": false,
+    "name": "devcontainer exec",
+    "commandline": "wsl bash -c \"path/to/devcontainer exec ? bash\"",
+},
+```
 
 ### Working with devcontainer templates
 
