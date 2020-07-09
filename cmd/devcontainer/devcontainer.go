@@ -74,7 +74,7 @@ func createExecCommand() *cobra.Command {
 			}
 
 			devcontainerName := args[0]
-			devcontainers, err := devcontainers.ListDevcontainers()
+			devcontainerList, err := devcontainers.ListDevcontainers()
 			if err != nil {
 				return err
 			}
@@ -83,17 +83,17 @@ func createExecCommand() *cobra.Command {
 			if devcontainerName == "?" {
 				// prompt user
 				fmt.Println("Specify the devcontainer to use:")
-				for index, devcontainer := range devcontainers {
+				for index, devcontainer := range devcontainerList {
 					fmt.Printf("%4d: %s (%s)\n", index, devcontainer.DevcontainerName, devcontainer.ContainerName)
 				}
 				selection := -1
 				_, _ = fmt.Scanf("%d", &selection)
-				if selection < 0 || selection >= len(devcontainers) {
+				if selection < 0 || selection >= len(devcontainerList) {
 					return fmt.Errorf("Invalid option")
 				}
-				containerID = devcontainers[selection].ContainerID
+				containerID = devcontainerList[selection].ContainerID
 			} else {
-				for _, devcontainer := range devcontainers {
+				for _, devcontainer := range devcontainerList {
 					if devcontainer.ContainerName == devcontainerName || devcontainer.DevcontainerName == devcontainerName {
 						containerID = devcontainer.ContainerID
 						break
@@ -104,7 +104,17 @@ func createExecCommand() *cobra.Command {
 				}
 			}
 
-			dockerArgs := []string{"exec", "-it", containerID}
+			localPath, err := devcontainers.GetLocalFolderFromDevContainer(containerID)
+			if err != nil {
+				return err
+			}
+
+			mountPath, err := devcontainers.GetWorkspaceMountPath(localPath)
+			if err != nil {
+				return err
+			}
+
+			dockerArgs := []string{"exec", "-it", "--workdir", mountPath, containerID}
 			dockerArgs = append(dockerArgs, args[1:]...)
 
 			dockerCmd := exec.Command("docker", dockerArgs...)
