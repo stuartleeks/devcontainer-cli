@@ -21,7 +21,12 @@ func createCompleteCommand(rootCmd *cobra.Command) *cobra.Command {
 	For example, to configure your bash shell to load completions for each session add to your bashrc
 	
 	# ~/.bashrc or ~/.profile
-	. <(devcontainer completion)
+	source <(devcontainer completion)
+
+	# if you want to alias the CLI:
+	alias dc=devcontainer
+    source <(devcontainer completion bash | sed s/devcontainer/dc/g)
+
 	`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
