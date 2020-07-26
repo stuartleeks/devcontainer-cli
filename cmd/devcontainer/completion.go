@@ -28,6 +28,9 @@ func createCompleteCommand(rootCmd *cobra.Command) *cobra.Command {
     source <(devcontainer completion bash | sed s/devcontainer/dc/g)
 
 	`,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// suppress the PersistentPreRun in main
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 1 {
 				_ = cmd.Usage()
