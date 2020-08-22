@@ -1,13 +1,20 @@
-build:
+.PHONY: help
+help: ## show this help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%s\033[0m|%s\n", $$1, $$2}' \
+		| column -t -s '|'
+
+
+build: ## Build devcontainer cli
 	go build ./cmd/devcontainer
 
-lint: build
+lint: build ## Build and lint
 	golangci-lint run
 
-devcontainer:
+devcontainer: ## (Advanced) Build the devcontainer
 	docker build -f ./.devcontainer/Dockerfile ./.devcontainer -t devcontainer-cli
 
-devcontainer-release:
+devcontainer-release: ## (Advanced) Run the devcontainer for release
 ifdef DEVCONTAINER
 	$(error This target can only be run outside of the devcontainer as it mounts files and this fails within a devcontainer. Don't worry all it needs is docker)
 endif
