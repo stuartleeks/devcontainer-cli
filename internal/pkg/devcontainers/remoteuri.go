@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/git"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/wsl"
 )
 
@@ -72,8 +73,11 @@ func GetWorkspaceMountPath(folderPath string) (string, error) {
 	}
 
 	// No `workspaceFolder` found in devcontainer.json - use default
-	_, folderName := filepath.Split(folderPath)
-	return fmt.Sprintf("/workspaces/%s", folderName), nil
+	devcontainerPath, err := getDefaultWorkspaceFolderForPath(folderPath)
+	if err != nil {
+		return "", fmt.Errorf("Error getting default workspace path: %s", err)
+	}
+	return fmt.Sprintf("/workspaces/%s", devcontainerPath), nil
 }
 
 // TODO: add tests (and implementation) to handle JSON parsing with comments
@@ -91,4 +95,27 @@ func getWorkspaceMountPathFromDevcontainerDefinition(definition []byte) (string,
 		return string(matches[1]), nil
 	}
 	return "", nil
+}
+
+func getDefaultWorkspaceFolderForPath(path string) (string, error) {
+
+	// get the git repo-root
+	rootPath, err := git.GetTopLevelPath(path)
+	if err != nil {
+		return "", err
+	}
+	if rootPath == "" {
+		// not a git repo, default to path
+		rootPath = path
+	}
+
+	// get parent to root
+	rootParent, _ := filepath.Split(rootPath)
+
+	// return path relative to rootParent
+	relativePath, err := filepath.Rel(rootParent, path)
+	if err != nil {
+		return "", err
+	}
+	return relativePath, nil
 }
