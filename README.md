@@ -32,7 +32,7 @@ Or to alias `devcontainer` (to `dc` in this example):
 
 ```bash
 alias dc=devcontainer
-source <(devcontainer completion bash | sed s/devcontainer/dc/g)
+complete -F __start_devcontainer dc
 ```
 
 ## Usage
