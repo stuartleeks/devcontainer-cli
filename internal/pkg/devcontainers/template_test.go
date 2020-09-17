@@ -14,7 +14,7 @@ func TestSetDevcontainerName(t *testing.T) {
 	assert.NoError(t, err)
 	defer os.Remove(f.Name())
 
-	f.WriteString(`{
+	_, _ = f.WriteString(`{
 	"name": "initial",
 	// here's a comment!
 	"otherProperties": [
@@ -23,7 +23,8 @@ func TestSetDevcontainerName(t *testing.T) {
 	]
 }`)
 
-	SetDevcontainerName(f.Name(), "newName")
+	err = SetDevcontainerName(f.Name(), "newName")
+	assert.NoError(t, err)
 
 	buf, err := ioutil.ReadFile(f.Name())
 	assert.NoError(t, err)
