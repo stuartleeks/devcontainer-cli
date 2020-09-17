@@ -13,8 +13,8 @@ Extract `devcontainer` from the archive and place in a folder in your `PATH`.
 Or if you just don't care and are happy to run random scripts from the internet:
 
 ```bash
-OS=linux # also darwin
-ARCH=amd64 # also 386
+export OS=linux # also darwin
+export ARCH=amd64 # also 386
 wget https://raw.githubusercontent.com/stuartleeks/devcontainer-cli/main/scripts/install.sh
 chmod +x install.sh
 sudo -E ./install.sh
