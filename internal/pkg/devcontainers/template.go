@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
@@ -85,4 +86,34 @@ func getTemplatesFromFolder(folder string) ([]DevcontainerTemplate, error) {
 		}
 	}
 	return templates, nil
+}
+
+func GetDefaultDevcontainerNameForFolder(folderPath string) (string, error) {
+
+	absPath, err := filepath.Abs(folderPath)
+	if err != nil {
+		return "", err
+	}
+
+	_, folderName := filepath.Split(absPath)
+	return folderName, nil
+}
+
+func SetDevcontainerName(devContainerJsonPath string, name string) error {
+	// This doesn't use `json` as devcontainer.json permits comments (and the default templates include them!)
+
+	buf, err := ioutil.ReadFile(devContainerJsonPath)
+	if err != nil {
+		return fmt.Errorf("error reading file %q: %s", devContainerJsonPath, err)
+	}
+
+	r := regexp.MustCompile("(\"name\"\\s*:\\s*\")[^\"]*(\")")
+	replacement := []byte("${1}" + name + "${2}")
+	buf = r.ReplaceAll(buf, replacement)
+
+	if err = ioutil.WriteFile(devContainerJsonPath, buf, 0777); err != nil {
+		return fmt.Errorf("error writing file %q: %s", devContainerJsonPath, err)
+	}
+
+	return nil
 }
