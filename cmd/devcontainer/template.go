@@ -64,6 +64,7 @@ func createTemplateListCommand() *cobra.Command {
 }
 
 func createTemplateAddCommand() *cobra.Command {
+	var devcontainerName string
 	cmd := &cobra.Command{
 		Use:   "add TEMPLATE_NAME",
 		Short: "add devcontainer from template",
@@ -97,10 +98,12 @@ func createTemplateAddCommand() *cobra.Command {
 			}
 
 			// by default the "name" in devcontainer.json is set to the name of the template
-			// override it here with the name of the containing folder
-			devcontainerName, err := devcontainers.GetDefaultDevcontainerNameForFolder(currentDirectory)
-			if err != nil {
-				return fmt.Errorf("Error getting default devcontainer name: %s", err)
+			// override it here with the value passed in as --devcontainer-name (or the containing folder if not set)
+			if devcontainerName == "" {
+				devcontainerName, err = devcontainers.GetDefaultDevcontainerNameForFolder(currentDirectory)
+				if err != nil {
+					return fmt.Errorf("Error getting default devcontainer name: %s", err)
+				}
 			}
 			devcontainerJsonPath := filepath.Join(currentDirectory, ".devcontainer/devcontainer.json")
 			err = devcontainers.SetDevcontainerName(devcontainerJsonPath, devcontainerName)
@@ -127,6 +130,7 @@ func createTemplateAddCommand() *cobra.Command {
 			return names, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
+	cmd.Flags().StringVar(&devcontainerName, "devcontainer-name", "", "Value to set the devcontainer.json name property to (default is folder name)")
 	return cmd
 }
 
