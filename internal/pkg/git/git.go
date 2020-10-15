@@ -10,6 +10,7 @@ import (
 // GetTopLevelPath returns the top-level folder for the git-repo that contains path, or empty string if not a repo
 func GetTopLevelPath(path string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	cmd.Dir = path
 
 	buf, err := cmd.Output()
 	if err != nil {
