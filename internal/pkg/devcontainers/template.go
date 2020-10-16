@@ -117,3 +117,20 @@ func SetDevcontainerName(devContainerJsonPath string, name string) error {
 
 	return nil
 }
+
+// "remoteUser": "vscode"
+
+func GetDevContainerUserName(devContainerJsonPath string) (string, error) {
+	buf, err := ioutil.ReadFile(devContainerJsonPath)
+	if err != nil {
+		return "", fmt.Errorf("error reading file %q: %s", devContainerJsonPath, err)
+	}
+
+	r := regexp.MustCompile("\n[^/]*\"remoteUser\"\\s*:\\s*\"([^\"]*)\"")
+	match := r.FindStringSubmatch(string(buf))
+
+	if len(match) <= 0 {
+		return "", nil
+	}
+	return match[1], nil
+}
