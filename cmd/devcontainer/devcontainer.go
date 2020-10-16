@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"sort"
+	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/devcontainers"
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/wsl"
 )
 
 func createListCommand() *cobra.Command {
@@ -114,7 +117,25 @@ func createExecCommand() *cobra.Command {
 				return err
 			}
 
-			dockerArgs := []string{"exec", "-it", "--workdir", mountPath, containerID}
+			wslPath := localPath
+			if strings.HasPrefix(wslPath, "\\\\wsl$") && wsl.IsWsl() {
+				wslPath, err = wsl.ConvertWindowsPathToWslPath(wslPath)
+				if err != nil {
+					return fmt.Errorf("error converting path: %s", err)
+				}
+			}
+
+			devcontainerJsonPath := path.Join(wslPath, ".devcontainer/devcontainer.json")
+			userName, err := devcontainers.GetDevContainerUserName(devcontainerJsonPath)
+			if err != nil {
+				return err
+			}
+
+			dockerArgs := []string{"exec", "-it", "--workdir", mountPath}
+			if userName != "" {
+				dockerArgs = append(dockerArgs, "--user", userName)
+			}
+			dockerArgs = append(dockerArgs, containerID)
 			dockerArgs = append(dockerArgs, args[1:]...)
 
 			dockerCmd := exec.Command("docker", dockerArgs...)
