@@ -67,13 +67,18 @@ func createListCommand() *cobra.Command {
 
 func createExecCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "exec DEVCONTAINER_NAME COMMAND [args...]",
+		Use:   "exec DEVCONTAINER_NAME COMMAND [args...] (args will default to /bin/bash if none provided)",
 		Short: "Execute a command in a devcontainer",
 		Long:  "Execute a command in a devcontainer, similar to `docker exec`. Pass `?` as DEVCONTAINER_NAME to be prompted.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if len(args) < 2 {
+			if len(args) < 1 {
 				return cmd.Usage()
+			}
+
+			// Default to executing /bin/bash
+			if (len(args) == 1) {
+				args = append(args, "/bin/bash")
 			}
 
 			devcontainerName := args[0]
