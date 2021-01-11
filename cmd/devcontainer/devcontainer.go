@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 	"text/tabwriter"
@@ -65,30 +66,57 @@ func createListCommand() *cobra.Command {
 	return cmdList
 }
 
+func countBooleans(values ...bool) int {
+	count := 0
+	for _, v := range values {
+		if v {
+			count++
+		}
+	}
+	return count
+}
+
 func createExecCommand() *cobra.Command {
+	var argDevcontainerName string
+	var argDevcontainerPath string
+	var argPromptForDevcontainer bool
+
 	cmd := &cobra.Command{
-		Use:   "exec DEVCONTAINER_NAME COMMAND [args...] (args will default to /bin/bash if none provided)",
+		Use:   "exec [--name <name>| --path <path> | --prompt ] [<command> [<args...>]] (command will default to /bin/bash if none provided)",
 		Short: "Execute a command in a devcontainer",
-		Long:  "Execute a command in a devcontainer, similar to `docker exec`. Pass `?` as DEVCONTAINER_NAME to be prompted.",
+		Long:  "Execute a command in a devcontainer, similar to `docker exec`",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if len(args) < 1 {
+			// Default to executing /bin/bash
+			if len(args) == 0 {
+				args = []string{"/bin/bash"}
+			}
+
+			sourceCount := countBooleans(
+				argDevcontainerName != "",
+				argDevcontainerPath != "",
+				argPromptForDevcontainer,
+			)
+			if sourceCount > 0 {
+				fmt.Println("Can specify at most one of --name/--path/--prompt")
 				return cmd.Usage()
 			}
 
-			// Default to executing /bin/bash
-			if (len(args) == 1) {
-				args = append(args, "/bin/bash")
-			}
-
-			devcontainerName := args[0]
+			containerID := ""
 			devcontainerList, err := devcontainers.ListDevcontainers()
 			if err != nil {
 				return err
 			}
-
-			containerID := ""
-			if devcontainerName == "?" {
+			if argDevcontainerName != "" {
+				var devcontainerName string
+				devcontainerName = argDevcontainerName
+				for _, devcontainer := range devcontainerList {
+					if devcontainer.ContainerName == devcontainerName || devcontainer.DevcontainerName == devcontainerName {
+						containerID = devcontainer.ContainerID
+						break
+					}
+				}
+			} else if argPromptForDevcontainer {
 				// prompt user
 				fmt.Println("Specify the devcontainer to use:")
 				for index, devcontainer := range devcontainerList {
@@ -101,15 +129,34 @@ func createExecCommand() *cobra.Command {
 				}
 				containerID = devcontainerList[selection].ContainerID
 			} else {
+				devcontainerPath := argDevcontainerPath
+				if devcontainerPath == "" {
+					devcontainerPath = "."
+				}
+				absPath, err := filepath.Abs(devcontainerPath)
+				if err != nil {
+					return fmt.Errorf("Error handling path %q: %s", devcontainerPath, err)
+				}
+
+				windowsPath := absPath
+				if wsl.IsWsl() {
+					var err error
+					windowsPath, err = wsl.ConvertWslPathToWindowsPath(windowsPath)
+					if err != nil {
+						return err
+					}
+				}
 				for _, devcontainer := range devcontainerList {
-					if devcontainer.ContainerName == devcontainerName || devcontainer.DevcontainerName == devcontainerName {
+					if devcontainer.LocalFolderPath == windowsPath {
 						containerID = devcontainer.ContainerID
 						break
 					}
 				}
-				if containerID == "" {
-					return cmd.Usage()
-				}
+			}
+
+			if containerID == "" {
+				fmt.Println("Failed to find dev container")
+				return cmd.Usage()
 			}
 
 			localPath, err := devcontainers.GetLocalFolderFromDevContainer(containerID)
@@ -130,8 +177,8 @@ func createExecCommand() *cobra.Command {
 				}
 			}
 
-			devcontainerJsonPath := path.Join(wslPath, ".devcontainer/devcontainer.json")
-			userName, err := devcontainers.GetDevContainerUserName(devcontainerJsonPath)
+			devcontainerJSONPath := path.Join(wslPath, ".devcontainer/devcontainer.json")
+			userName, err := devcontainers.GetDevContainerUserName(devcontainerJSONPath)
 			if err != nil {
 				return err
 			}
@@ -141,7 +188,7 @@ func createExecCommand() *cobra.Command {
 				dockerArgs = append(dockerArgs, "--user", userName)
 			}
 			dockerArgs = append(dockerArgs, containerID)
-			dockerArgs = append(dockerArgs, args[1:]...)
+			dockerArgs = append(dockerArgs, args...)
 
 			dockerCmd := exec.Command("docker", dockerArgs...)
 			dockerCmd.Stdin = os.Stdin
@@ -149,16 +196,16 @@ func createExecCommand() *cobra.Command {
 
 			err = dockerCmd.Start()
 			if err != nil {
-				return fmt.Errorf("Exec: start error: %s\n", err)
+				return fmt.Errorf("Exec: start error: %s", err)
 			}
 			err = dockerCmd.Wait()
 			if err != nil {
-				return fmt.Errorf("Exec: wait error: %s\n", err)
+				return fmt.Errorf("Exec: wait error: %s", err)
 			}
 			return nil
 		},
-		Args:                  cobra.ArbitraryArgs,
-		DisableFlagParsing:    true,
+		Args: cobra.ArbitraryArgs,
+		// DisableFlagParsing:    true,
 		DisableFlagsInUseLine: true,
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			// only completing the first arg  (devcontainer name)
@@ -177,5 +224,8 @@ func createExecCommand() *cobra.Command {
 			return names, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
+	cmd.Flags().StringVarP(&argDevcontainerName, "name", "n", "", "name of dev container to exec into")
+	cmd.Flags().StringVarP(&argDevcontainerPath, "path", "", "", "path containing the dev container to exec into")
+	cmd.Flags().BoolVarP(&argPromptForDevcontainer, "prompt", "", false, "prompt for the dev container to exec into")
 	return cmd
 }

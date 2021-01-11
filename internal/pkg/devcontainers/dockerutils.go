@@ -19,6 +19,7 @@ type DevcontainerInfo struct {
 	ContainerID      string
 	ContainerName    string
 	DevcontainerName string
+	LocalFolderPath  string
 }
 
 const (
@@ -63,6 +64,7 @@ func ListDevcontainers() ([]DevcontainerInfo, error) {
 		devcontainer := DevcontainerInfo{
 			ContainerID:      parts[listPartID],
 			ContainerName:    parts[listPartContainerName],
+			LocalFolderPath:  parts[listPartLocalFolder],
 			DevcontainerName: name,
 		}
 		devcontainers = append(devcontainers, devcontainer)

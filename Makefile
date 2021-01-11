@@ -5,7 +5,7 @@ help: ## show this help
 		| column -t -s '|'
 
 
-build: ## Build devcontainer cli
+build: fmt ## Build devcontainer cli
 	go build ./cmd/devcontainer
 
 lint: build ## Build and lint
@@ -32,3 +32,7 @@ endif
 
 test:
 	go test -v ./...
+
+
+fmt:
+	find . -name '*.go' | grep -v vendor | xargs gofmt -s -w
