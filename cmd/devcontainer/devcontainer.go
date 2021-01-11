@@ -80,9 +80,10 @@ func createExecCommand() *cobra.Command {
 	var argDevcontainerName string
 	var argDevcontainerPath string
 	var argPromptForDevcontainer bool
+	var argWorkDir string
 
 	cmd := &cobra.Command{
-		Use:   "exec [--name <name>| --path <path> | --prompt ] [<command> [<args...>]] (command will default to /bin/bash if none provided)",
+		Use:   "exec [--name <name>| --path <path> | --prompt ] [--work-dir <work-dir>] [<command> [<args...>]] (command will default to /bin/bash if none provided)",
 		Short: "Execute a command in a devcontainer",
 		Long:  "Execute a command in a devcontainer, similar to `docker exec`",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -164,9 +165,12 @@ func createExecCommand() *cobra.Command {
 				return err
 			}
 
-			mountPath, err := devcontainers.GetWorkspaceMountPath(localPath)
-			if err != nil {
-				return err
+			mountPath := argWorkDir
+			if mountPath == "" {
+				mountPath, err = devcontainers.GetWorkspaceMountPath(localPath)
+				if err != nil {
+					return err
+				}
 			}
 
 			wslPath := localPath
@@ -204,8 +208,7 @@ func createExecCommand() *cobra.Command {
 			}
 			return nil
 		},
-		Args: cobra.ArbitraryArgs,
-		// DisableFlagParsing:    true,
+		Args:                  cobra.ArbitraryArgs,
 		DisableFlagsInUseLine: true,
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 			// only completing the first arg  (devcontainer name)
@@ -227,5 +230,6 @@ func createExecCommand() *cobra.Command {
 	cmd.Flags().StringVarP(&argDevcontainerName, "name", "n", "", "name of dev container to exec into")
 	cmd.Flags().StringVarP(&argDevcontainerPath, "path", "", "", "path containing the dev container to exec into")
 	cmd.Flags().BoolVarP(&argPromptForDevcontainer, "prompt", "", false, "prompt for the dev container to exec into")
+	cmd.Flags().StringVarP(&argWorkDir, "work-dir", "", "", "working directory to use in the dev container")
 	return cmd
 }
