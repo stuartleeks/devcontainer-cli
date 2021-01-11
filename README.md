@@ -51,13 +51,25 @@ For example:
 
 ```bash
 # Run an interactive bash shell in the vscode-remote-test-dockerfile devcontainer
-devcontainer exec vscode-remote-test-dockerfile bash
+devcontainer exec --name vscode-remote-test-dockerfile bash
 
 # Run a command with args in the vscode-remote-test-dockercompose_devcontainer/mongo devcontainer
-devcontainer exec vscode-remote-test-dockercompose_devcontainer/mongo ls -a /workspaces/vscode-remote-test-dockerfile
+devcontainer exec --name vscode-remote-test-dockercompose_devcontainer/mongo ls -a /workspaces/vscode-remote-test-dockerfile
+
+# Run `bash` in the dev container for the project at `~/ source/my-proj`
+devcontainer exec --path ~/source/my-proj bash
+
+# If none of --name/--path/--prompt are specified then `--path .` is assumed (i.e. use the dev container for the current directory)
+devcontainer exec bash
+
+# If command/args not set, `bash` is assumed
+devcontainer exec --name vscode-remote-test-dockerfile
+
+# Combining these to launch bash in the dev container for the project in the current directory:
+devcontainer exec
 ```
 
-You can pass `?` as the devcontainer name and the CLI will prompt you to pick a devcontainer to run the `exec` command against, e.g.:
+You can use `--prompt` instead of `--name` or `--path` and the CLI will prompt you to pick a devcontainer to run the `exec` command against, e.g.:
 
 ```bash
 $ ./devcontainer exec ? bash
@@ -74,9 +86,11 @@ You can use this with Windows Terminal profiles:
     "guid": "{4b304185-99d2-493c-940c-ae74e0f14bba}",
     "hidden": false,
     "name": "devcontainer exec",
-    "commandline": "wsl bash -c \"path/to/devcontainer exec ? bash\"",
+    "commandline": "wsl bash -c \"path/to/devcontainer exec --prompt bash\"",
 },
 ```
+
+By default, `devcontainer exec` will set the working directory to be the mount path for the dev container. This can be overridden using `--work-dir`.
 
 ### Working with devcontainer templates
 
