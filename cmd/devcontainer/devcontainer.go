@@ -210,25 +210,26 @@ func createExecCommand() *cobra.Command {
 		Args:                  cobra.ArbitraryArgs,
 		DisableFlagsInUseLine: true,
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-			// only completing the first arg  (devcontainer name)
-			if len(args) != 0 {
-				return nil, cobra.ShellCompDirectiveNoFileComp
-			}
-			devcontainers, err := devcontainers.ListDevcontainers()
-			if err != nil {
-				os.Exit(1)
-			}
-			names := []string{}
-			for _, devcontainer := range devcontainers {
-				names = append(names, devcontainer.DevcontainerName)
-			}
-			sort.Strings(names)
-			return names, cobra.ShellCompDirectiveNoFileComp
+			return nil, cobra.ShellCompDirectiveNoFileComp
 		},
 	}
 	cmd.Flags().StringVarP(&argDevcontainerName, "name", "n", "", "name of dev container to exec into")
 	cmd.Flags().StringVarP(&argDevcontainerPath, "path", "", "", "path containing the dev container to exec into")
 	cmd.Flags().BoolVarP(&argPromptForDevcontainer, "prompt", "", false, "prompt for the dev container to exec into")
 	cmd.Flags().StringVarP(&argWorkDir, "work-dir", "", "", "working directory to use in the dev container")
+
+	_ = cmd.RegisterFlagCompletionFunc("name", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		devcontainers, err := devcontainers.ListDevcontainers()
+		if err != nil {
+			os.Exit(1)
+		}
+		names := []string{}
+		for _, devcontainer := range devcontainers {
+			names = append(names, devcontainer.DevcontainerName)
+		}
+		sort.Strings(names)
+		return names, cobra.ShellCompDirectiveNoFileComp
+
+	})
 	return cmd
 }
