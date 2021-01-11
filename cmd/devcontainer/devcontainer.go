@@ -109,8 +109,7 @@ func createExecCommand() *cobra.Command {
 				return err
 			}
 			if argDevcontainerName != "" {
-				var devcontainerName string
-				devcontainerName = argDevcontainerName
+				devcontainerName := argDevcontainerName
 				for _, devcontainer := range devcontainerList {
 					if devcontainer.ContainerName == devcontainerName || devcontainer.DevcontainerName == devcontainerName {
 						containerID = devcontainer.ContainerID
