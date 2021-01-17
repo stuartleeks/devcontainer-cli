@@ -155,7 +155,7 @@ func createExecCommand() *cobra.Command {
 			}
 
 			if containerID == "" {
-				fmt.Println("Failed to find dev container")
+				fmt.Println("Failed to find a matching (running) dev container")
 				return cmd.Usage()
 			}
 
