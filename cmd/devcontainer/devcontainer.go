@@ -98,7 +98,7 @@ func createExecCommand() *cobra.Command {
 				argDevcontainerPath != "",
 				argPromptForDevcontainer,
 			)
-			if sourceCount > 0 {
+			if sourceCount > 1 {
 				fmt.Println("Can specify at most one of --name/--path/--prompt")
 				return cmd.Usage()
 			}
