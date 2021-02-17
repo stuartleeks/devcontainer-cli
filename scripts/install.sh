@@ -18,6 +18,7 @@ fi
 
 LATEST_VERSION=$(curl --silent "https://api.github.com/repos/stuartleeks/devcontainer-cli/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")')
 echo $LATEST_VERSION
+mkdir -p ~/bin
 wget https://github.com/stuartleeks/devcontainer-cli/releases/download/${LATEST_VERSION}/devcontainer-cli_${OS}_${ARCH}.tar.gz
-tar -C /usr/bin -zxvf devcontainer-cli_${OS}_${ARCH}.tar.gz devcontainer
-chmod +x /usr/bin/devcontainer
+tar -C ~/bin -zxvf devcontainer-cli_${OS}_${ARCH}.tar.gz devcontainer
+chmod +x ~/bin/devcontainer
