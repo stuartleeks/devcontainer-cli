@@ -19,6 +19,7 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
+
 brews:
   - tap:
       owner: stuartleeks
@@ -28,7 +29,7 @@ brews:
     description: CLI for working with Visual Studio Code devcontainers 
     test: |
       system "#{bin}/devcontainer --version"
-      
+
 changelog:
   sort: asc
   filters:
