@@ -19,7 +19,16 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
-
+brews:
+  - tap:
+      owner: stuartleeks
+      name: homebrew-tap
+    folder: Formula
+    homepage: https://github.com/stuartleeks/devcontainer-cli
+    description: CLI for working with Visual Studio Code devcontainers 
+    test: |
+      system "#{bin}/devcontainer --version"
+      
 changelog:
   sort: asc
   filters:
