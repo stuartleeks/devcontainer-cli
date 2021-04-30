@@ -10,6 +10,8 @@ Head to the [latest release page](https://github.com/stuartleeks/devcontainer-cl
 
 Extract `devcontainer` from the archive and place in a folder in your `PATH`.
 
+You can also install using `homebrew` with `brew install stuartleeks/tap/devcontainer`
+
 Or if you just don't care and are happy to run random scripts from the internet:
 
 ```bash

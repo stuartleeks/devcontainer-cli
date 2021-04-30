@@ -48,7 +48,7 @@ RUN \
     # --> GolangCI-lint
     && curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sed 's/tar -/tar --no-same-owner -/g' | sh -s -- -b $(go env GOPATH)/bin \
     # --> Go releaser 
-    && curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh -s -- "v0.132.1"\
+    && curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh -s -- "v0.164.0"\
     # --> Install junit converter
     && go get github.com/jstemmer/go-junit-report@v0.9.1 \
     && rm -rf /go/src/ && rm -rf /go/pkg
