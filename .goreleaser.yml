@@ -25,6 +25,7 @@ brews:
       owner: stuartleeks
       name: homebrew-tap
     folder: Formula
+    name: devcontainer
     homepage: https://github.com/stuartleeks/devcontainer-cli
     description: CLI for working with Visual Studio Code devcontainers 
     test: |
