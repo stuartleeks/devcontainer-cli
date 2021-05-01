@@ -27,7 +27,9 @@ brews:
     folder: Formula
     name: devcontainer
     homepage: https://github.com/stuartleeks/devcontainer-cli
-    description: CLI for working with Visual Studio Code devcontainers 
+    description: CLI for working with Visual Studio Code devcontainers
+    install: |
+      bin.install "devcontainer" 
     test: |
       system "#{bin}/devcontainer --version"
 
