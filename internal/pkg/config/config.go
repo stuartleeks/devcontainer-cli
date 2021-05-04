@@ -48,6 +48,10 @@ func GetTemplateFolders() []string {
 	EnsureInitialised()
 	return viper.GetStringSlice("templatePaths")
 }
+func GetSnippetFolders() []string {
+	EnsureInitialised()
+	return viper.GetStringSlice("snippetPaths")
+}
 func GetLastUpdateCheck() time.Time {
 	EnsureInitialised()
 	return viper.GetTime("lastUpdateCheck")

@@ -27,6 +27,7 @@ func main() {
 	rootCmd.AddCommand(createExecCommand())
 	rootCmd.AddCommand(createListCommand())
 	rootCmd.AddCommand(createTemplateCommand())
+	rootCmd.AddCommand(createSnippetCommand())
 	rootCmd.AddCommand(createUpdateCommand())
 	rootCmd.AddCommand(createOpenInCodeCommand())
 	rootCmd.AddCommand(createOpenInCodeInsidersCommand())
