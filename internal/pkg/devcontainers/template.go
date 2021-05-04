@@ -36,13 +36,22 @@ func GetTemplateByName(name string) (*DevcontainerTemplate, error) {
 
 // GetTemplates returns a list of discovered templates
 func GetTemplates() ([]DevcontainerTemplate, error) {
-	templates := []DevcontainerTemplate{}
-	templateNames := map[string]bool{}
 
 	folders := config.GetTemplateFolders()
 	if len(folders) == 0 {
 		return []DevcontainerTemplate{}, &errors.StatusError{Message: "No template folders configured - see https://github.com/stuartleeks/devcontainer-cli/#working-with-devcontainer-templates"}
 	}
+	templates, err := getTemplatesFromFolders(folders)
+	if err != nil {
+		return []DevcontainerTemplate{}, err
+	}
+	return templates, nil
+}
+
+func getTemplatesFromFolders(folders []string) ([]DevcontainerTemplate, error) {
+	templates := []DevcontainerTemplate{}
+	templateNames := map[string]bool{}
+
 	for _, folder := range folders {
 		folder := os.ExpandEnv(folder)
 		newTemplates, err := getTemplatesFromFolder(folder)
