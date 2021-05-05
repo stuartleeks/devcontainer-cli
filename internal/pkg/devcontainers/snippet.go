@@ -1,6 +1,7 @@
 package devcontainers
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,13 +11,14 @@ import (
 
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/errors"
+	ioutil2 "github.com/stuartleeks/devcontainer-cli/internal/pkg/ioutil"
 )
 
-type DevcontainerSnippetType int
+type DevcontainerSnippetType string
 
 const (
-	DevcontainerSnippetTypeSingleFile = 1
-	DevcontainerSnippetTypeFolder     = 2
+	DevcontainerSnippetTypeSingleFile = "Snippet:SingleFile"
+	DevcontainerSnippetTypeFolder     = "Snippet:Folder"
 )
 
 // DevcontainerSnippet holds info on snippets for list/add etc
@@ -105,4 +107,90 @@ func getSnippetsFromFolder(folder string) ([]DevcontainerSnippet, error) {
 		}
 	}
 	return snippets, nil
+}
+
+func AddSnippetToDevcontainer(projectFolder string, snippetName string) error {
+
+	snippet, err := GetSnippetByName(snippetName)
+	if err != nil {
+		return err
+	}
+	if snippet == nil {
+		return fmt.Errorf("Snippet '%s' not found\n", snippetName)
+	}
+	return addSnippetToDevcontainer(projectFolder, snippet)
+}
+func addSnippetToDevcontainer(projectFolder string, snippet *DevcontainerSnippet) error {
+	switch snippet.Type {
+	case DevcontainerSnippetTypeSingleFile:
+		return addSingleFileSnippetToDevContainer(projectFolder, snippet)
+	default:
+		return fmt.Errorf("Unhandled snippet type: %q", snippet.Type)
+	}
+}
+
+func addSingleFileSnippetToDevContainer(projectFolder string, snippet *DevcontainerSnippet) error {
+
+	if snippet.Type != DevcontainerSnippetTypeSingleFile {
+		return fmt.Errorf("Expected single file snippet")
+	}
+
+	scriptFolderPath := filepath.Join(projectFolder, ".devcontainer", "scripts")
+	if err := os.MkdirAll(scriptFolderPath, 0755); err != nil {
+		return err
+	}
+	_, scriptFilename := filepath.Split(snippet.Path)
+	if err := ioutil2.CopyFile(snippet.Path, filepath.Join(scriptFolderPath, scriptFilename), 0755); err != nil {
+		return err
+	}
+
+	dockerfileFilename := filepath.Join(projectFolder, ".devcontainer", "Dockerfile")
+	buf, err := ioutil.ReadFile(dockerfileFilename)
+	if err != nil {
+		return fmt.Errorf("Error reading Dockerfile: %s", err)
+	}
+
+	snippetContent := fmt.Sprintf(`
+# %[1]s
+COPY scripts/%[2]s /tmp/
+RUN /tmp/%[2]s
+`, snippet.Name, scriptFilename)
+
+	dockerfileContent := string(buf)
+	dockerFileLines := strings.Split(dockerfileContent, "\n")
+	addSeparator := false
+	addedSnippetContent := false
+	var newContent bytes.Buffer
+	for _, line := range dockerFileLines {
+		if addSeparator {
+			if _, err = newContent.WriteString("\n"); err != nil {
+				return err
+			}
+		}
+		addSeparator = true
+		if _, err = newContent.WriteString(line); err != nil {
+			return err
+		}
+
+		if strings.Contains(line, "__DEVCONTAINER_SNIPPET_INSERT__") {
+			if _, err = newContent.WriteString("\n"); err != nil {
+				return err
+			}
+			if _, err = newContent.WriteString(snippetContent); err != nil {
+				return err
+			}
+			addedSnippetContent = true
+			addSeparator = false // avoid extra separator
+		}
+	}
+
+	if !addedSnippetContent {
+		if _, err = newContent.WriteString(snippetContent); err != nil {
+			return err
+		}
+	}
+
+	err = ioutil.WriteFile(dockerfileFilename, newContent.Bytes(), 0)
+
+	return err
 }
