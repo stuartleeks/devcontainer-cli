@@ -10,18 +10,14 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Configure apt, install packages and tools
 RUN apt-get update \
-    && apt-get -y install --no-install-recommends apt-utils dialog nano \
+    && apt-get -y install --no-install-recommends apt-utils dialog nano sudo bsdmainutils \
     #
     # Verify git, process tools, lsb-release (common in install instructions for CLIs) installed
     && apt-get -y install git iproute2 procps lsb-release \
     # Install Release Tools
     #
     # --> RPM used by goreleaser
-    && apt install -y rpm \
-    # Clean up
-    && apt-get autoremove -y \
-    && apt-get clean -y \
-    && rm -rf /var/lib/apt/lists/*
+    && apt install -y rpm 
 
 # This Dockerfile adds a non-root user with sudo access. Use the "remoteUser"
 # property in devcontainer.json to use it. On Linux, the container user's GID/UIDs
