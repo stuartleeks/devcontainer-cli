@@ -92,7 +92,11 @@ You can use this with Windows Terminal profiles:
 },
 ```
 
-By default, `devcontainer exec` will set the working directory to be the mount path for the dev container. This can be overridden using `--work-dir`.
+
+There are some other benefits of `devcontainer exec` compared to `docker exec`:
+- it sets the working directory to be the mount path for the dev container. This can be overridden using `--work-dir`.
+- it checks whether you have [configured a user in the dev container](https://code.visualstudio.com/docs/remote/containers-advanced#_adding-a-nonroot-user-to-your-dev-container) and uses this user for the `docker exec`.
+- it checks whether you have set up an SSH agent. If you have and VS Code detects it then VS Code will [forward key requests from the container](https://code.visualstudio.com/docs/remote/containers#_using-ssh-keys). In this scenario, `devcontainer exec` configures the exec session to also forward key requests. This enables operations against git remotes secured with SSH keys to succeed.
 
 ### Working with devcontainer templates
 
