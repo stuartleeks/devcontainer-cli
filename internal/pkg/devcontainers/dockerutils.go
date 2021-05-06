@@ -4,8 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"strings"
+
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/wsl"
 )
 
 // Devcontainer names are a derived property.
@@ -84,4 +89,106 @@ func GetLocalFolderFromDevContainer(containerIDOrName string) (string, error) {
 	}
 
 	return strings.TrimSpace(string(output)), nil
+}
+
+// GetContainerIDForPath returns the ID of the running container that matches the path
+func GetContainerIDForPath(devcontainerPath string) (string, error) {
+	if devcontainerPath == "" {
+		devcontainerPath = "."
+	}
+	absPath, err := filepath.Abs(devcontainerPath)
+	if err != nil {
+		return "", fmt.Errorf("Error handling path %q: %s", devcontainerPath, err)
+	}
+
+	windowsPath := absPath
+	if wsl.IsWsl() {
+		var err error
+		windowsPath, err = wsl.ConvertWslPathToWindowsPath(windowsPath)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	devcontainerList, err := ListDevcontainers()
+	if err != nil {
+		return "", fmt.Errorf("Error getting container list: %s", err)
+	}
+
+	for _, devcontainer := range devcontainerList {
+		if devcontainer.LocalFolderPath == windowsPath {
+			containerID := devcontainer.ContainerID
+			return containerID, nil
+		}
+	}
+	return "", fmt.Errorf("Could not find running container for path %q", devcontainerPath)
+}
+
+func ExecInDevContainer(containerIDOrName string, workDir string, args []string) error {
+
+	containerID := ""
+	devcontainerList, err := ListDevcontainers()
+	if err != nil {
+		return err
+	}
+
+	for _, devcontainer := range devcontainerList {
+		if devcontainer.ContainerName == containerIDOrName ||
+			devcontainer.DevcontainerName == containerIDOrName ||
+			devcontainer.ContainerID == containerIDOrName {
+			containerID = devcontainer.ContainerID
+			break
+		}
+	}
+
+	if containerID == "" {
+		return fmt.Errorf("Failed to find a matching (running) dev container for %q", containerIDOrName)
+	}
+
+	localPath, err := GetLocalFolderFromDevContainer(containerID)
+	if err != nil {
+		return err
+	}
+
+	if workDir == "" {
+		workDir, err = GetWorkspaceMountPath(localPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	wslPath := localPath
+	if strings.HasPrefix(wslPath, "\\\\wsl$") && wsl.IsWsl() {
+		wslPath, err = wsl.ConvertWindowsPathToWslPath(wslPath)
+		if err != nil {
+			return fmt.Errorf("error converting path: %s", err)
+		}
+	}
+
+	devcontainerJSONPath := path.Join(wslPath, ".devcontainer/devcontainer.json")
+	userName, err := GetDevContainerUserName(devcontainerJSONPath)
+	if err != nil {
+		return err
+	}
+
+	dockerArgs := []string{"exec", "-it", "--workdir", workDir}
+	if userName != "" {
+		dockerArgs = append(dockerArgs, "--user", userName)
+	}
+	dockerArgs = append(dockerArgs, containerID)
+	dockerArgs = append(dockerArgs, args...)
+
+	dockerCmd := exec.Command("docker", dockerArgs...)
+	dockerCmd.Stdin = os.Stdin
+	dockerCmd.Stdout = os.Stdout
+
+	err = dockerCmd.Start()
+	if err != nil {
+		return fmt.Errorf("Exec: start error: %s", err)
+	}
+	err = dockerCmd.Wait()
+	if err != nil {
+		return fmt.Errorf("Exec: wait error: %s", err)
+	}
+	return nil
 }

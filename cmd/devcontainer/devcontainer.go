@@ -3,16 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
 	"sort"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/devcontainers"
-	"github.com/stuartleeks/devcontainer-cli/internal/pkg/wsl"
 )
 
 func createListCommand() *cobra.Command {
@@ -103,19 +98,13 @@ func createExecCommand() *cobra.Command {
 				return cmd.Usage()
 			}
 
-			containerID := ""
+			containerIDOrName := ""
 			devcontainerList, err := devcontainers.ListDevcontainers()
 			if err != nil {
 				return err
 			}
 			if argDevcontainerName != "" {
-				devcontainerName := argDevcontainerName
-				for _, devcontainer := range devcontainerList {
-					if devcontainer.ContainerName == devcontainerName || devcontainer.DevcontainerName == devcontainerName {
-						containerID = devcontainer.ContainerID
-						break
-					}
-				}
+				containerIDOrName = argDevcontainerName
 			} else if argPromptForDevcontainer {
 				// prompt user
 				fmt.Println("Specify the devcontainer to use:")
@@ -127,85 +116,16 @@ func createExecCommand() *cobra.Command {
 				if selection < 0 || selection >= len(devcontainerList) {
 					return fmt.Errorf("Invalid option")
 				}
-				containerID = devcontainerList[selection].ContainerID
+				containerIDOrName = devcontainerList[selection].ContainerID
 			} else {
 				devcontainerPath := argDevcontainerPath
-				if devcontainerPath == "" {
-					devcontainerPath = "."
-				}
-				absPath, err := filepath.Abs(devcontainerPath)
-				if err != nil {
-					return fmt.Errorf("Error handling path %q: %s", devcontainerPath, err)
-				}
-
-				windowsPath := absPath
-				if wsl.IsWsl() {
-					var err error
-					windowsPath, err = wsl.ConvertWslPathToWindowsPath(windowsPath)
-					if err != nil {
-						return err
-					}
-				}
-				for _, devcontainer := range devcontainerList {
-					if devcontainer.LocalFolderPath == windowsPath {
-						containerID = devcontainer.ContainerID
-						break
-					}
-				}
-			}
-
-			if containerID == "" {
-				fmt.Println("Failed to find a matching (running) dev container")
-				return cmd.Usage()
-			}
-
-			localPath, err := devcontainers.GetLocalFolderFromDevContainer(containerID)
-			if err != nil {
-				return err
-			}
-
-			mountPath := argWorkDir
-			if mountPath == "" {
-				mountPath, err = devcontainers.GetWorkspaceMountPath(localPath)
+				containerIDOrName, err = devcontainers.GetContainerIDForPath(devcontainerPath)
 				if err != nil {
 					return err
 				}
 			}
 
-			wslPath := localPath
-			if strings.HasPrefix(wslPath, "\\\\wsl$") && wsl.IsWsl() {
-				wslPath, err = wsl.ConvertWindowsPathToWslPath(wslPath)
-				if err != nil {
-					return fmt.Errorf("error converting path: %s", err)
-				}
-			}
-
-			devcontainerJSONPath := path.Join(wslPath, ".devcontainer/devcontainer.json")
-			userName, err := devcontainers.GetDevContainerUserName(devcontainerJSONPath)
-			if err != nil {
-				return err
-			}
-
-			dockerArgs := []string{"exec", "-it", "--workdir", mountPath}
-			if userName != "" {
-				dockerArgs = append(dockerArgs, "--user", userName)
-			}
-			dockerArgs = append(dockerArgs, containerID)
-			dockerArgs = append(dockerArgs, args...)
-
-			dockerCmd := exec.Command("docker", dockerArgs...)
-			dockerCmd.Stdin = os.Stdin
-			dockerCmd.Stdout = os.Stdout
-
-			err = dockerCmd.Start()
-			if err != nil {
-				return fmt.Errorf("Exec: start error: %s", err)
-			}
-			err = dockerCmd.Wait()
-			if err != nil {
-				return fmt.Errorf("Exec: wait error: %s", err)
-			}
-			return nil
+			return devcontainers.ExecInDevContainer(containerIDOrName, argWorkDir, args)
 		},
 		Args:                  cobra.ArbitraryArgs,
 		DisableFlagsInUseLine: true,
