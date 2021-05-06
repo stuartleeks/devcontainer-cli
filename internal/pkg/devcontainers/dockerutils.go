@@ -171,9 +171,20 @@ func ExecInDevContainer(containerIDOrName string, workDir string, args []string)
 		return err
 	}
 
+	sshAuthSockValue, err := getSshAuthSockValue(containerID)
+	if err != nil {
+		// output error and continue without SSH_AUTH_SOCK value
+		sshAuthSockValue = ""
+		fmt.Printf("Warning: Failed to get SSH_AUTH_SOCK value: %s\n", err)
+		fmt.Println("Continuing without setting SSH_AUTH_SOCK...")
+	}
+
 	dockerArgs := []string{"exec", "-it", "--workdir", workDir}
 	if userName != "" {
 		dockerArgs = append(dockerArgs, "--user", userName)
+	}
+	if sshAuthSockValue != "" {
+		dockerArgs = append(dockerArgs, "--env", "SSH_AUTH_SOCK="+sshAuthSockValue)
 	}
 	dockerArgs = append(dockerArgs, containerID)
 	dockerArgs = append(dockerArgs, args...)
@@ -191,4 +202,36 @@ func ExecInDevContainer(containerIDOrName string, workDir string, args []string)
 		return fmt.Errorf("Exec: wait error: %s", err)
 	}
 	return nil
+}
+
+// getSshAuthSockValue returns the value to use for the SSH_AUTH_SOCK env var when exec'ing into the container, or empty string if no value is found
+func getSshAuthSockValue(containerID string) (string, error) {
+
+	// If the host has SSH_AUTH_SOCK set then VS Code spins up forwarding for key requests
+	// inside the dev container to the SSH agent on the host.
+
+	hostSshAuthSockValue := os.Getenv("SSH_AUTH_SOCK")
+	if hostSshAuthSockValue == "" {
+		// Nothing to see, move along
+		return "", nil
+	}
+
+	// Host has SSH_AUTH_SOCK set, so expecting the dev container to have forwarding set up
+	// Find the latest /tmp/vscode-ssh-auth-<...>.sock
+
+	dockerArgs := []string{"exec", containerID, "bash", "-c", "ls -t -d -1 \"${TMPDIR:-/tmp}\"/vscode-ssh-auth-*"}
+
+	dockerCmd := exec.Command("docker", dockerArgs...)
+	buf, err := dockerCmd.CombinedOutput()
+	if err != nil {
+		errMessage := string(buf)
+		return "", fmt.Errorf("Docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
+	}
+
+	output := string(buf)
+	lines := strings.Split(output, "\n")
+	if len(lines) <= 0 {
+		return "", nil
+	}
+	return strings.TrimSpace(lines[0]), nil
 }
