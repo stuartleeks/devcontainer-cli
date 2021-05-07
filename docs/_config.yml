@@ -1,1 +1,5 @@
 theme: jekyll-theme-slate
+
+title: devcontainer-cli
+description: Making the most of VS Code dev containers at the terminal
+rootLink: https://stuartleeks.github.io/devcontainer-cli
