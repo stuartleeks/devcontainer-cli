@@ -7,9 +7,11 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/errors"
+	ioutil2 "github.com/stuartleeks/devcontainer-cli/internal/pkg/ioutil"
 )
 
 // DevcontainerTemplate holds info on templates for list/add etc
@@ -108,6 +110,30 @@ func GetDefaultDevcontainerNameForFolder(folderPath string) (string, error) {
 	return folderName, nil
 }
 
+func CopyTemplateToFolder(templatePath string, targetFolder string, devcontainerName string) error {
+	var err error
+
+	if err = ioutil2.CopyFolder(templatePath, targetFolder+"/.devcontainer"); err != nil {
+		return fmt.Errorf("Error copying folder: %s\n", err)
+	}
+
+	// by default the "name" in devcontainer.json is set to the name of the template
+	// override it here with the value passed in as --devcontainer-name (or the containing folder if not set)
+	if devcontainerName == "" {
+		devcontainerName, err = GetDefaultDevcontainerNameForFolder(targetFolder)
+		if err != nil {
+			return fmt.Errorf("Error getting default devcontainer name: %s", err)
+		}
+	}
+	devcontainerJsonPath := filepath.Join(targetFolder, ".devcontainer/devcontainer.json")
+	err = SetDevcontainerName(devcontainerJsonPath, devcontainerName)
+	if err != nil {
+		return fmt.Errorf("Error setting devcontainer name: %s", err)
+	}
+
+	return nil
+}
+
 func SetDevcontainerName(devContainerJsonPath string, name string) error {
 	// This doesn't use `json` as devcontainer.json permits comments (and the default templates include them!)
 
@@ -115,11 +141,17 @@ func SetDevcontainerName(devContainerJsonPath string, name string) error {
 	if err != nil {
 		return fmt.Errorf("error reading file %q: %s", devContainerJsonPath, err)
 	}
+	content := string(buf)
 
+	// replace `name` property in JSON
 	r := regexp.MustCompile("(\"name\"\\s*:\\s*\")[^\"]*(\")")
-	replacement := []byte("${1}" + name + "${2}")
-	buf = r.ReplaceAll(buf, replacement)
+	replacement := "${1}" + name + "${2}"
+	content = r.ReplaceAllString(content, replacement)
 
+	// replace __DEVCONTAINER_NAME__ with name
+	content = strings.ReplaceAll(content, "__DEVCONTAINER_NAME__", name)
+
+	buf = []byte(content)
 	if err = ioutil.WriteFile(devContainerJsonPath, buf, 0777); err != nil {
 		return fmt.Errorf("error writing file %q: %s", devContainerJsonPath, err)
 	}

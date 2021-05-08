@@ -102,6 +102,37 @@ func TestGetDevContainerUserName_Commented(t *testing.T) {
 	assert.Equal(t, "", user)
 }
 
+func TestSetDevcontainerName_SubstitutionValue(t *testing.T) {
+
+	f, err := ioutil.TempFile("", "test.json")
+	assert.NoError(t, err)
+	defer os.Remove(f.Name())
+
+	_, _ = f.WriteString(`{
+	"name": "initial",
+	// here's a comment!
+	"otherProperties": [
+		"something-__DEVCONTAINER_NAME__",
+		"here-__DEVCONTAINER_NAME__"
+	]
+}`)
+
+	err = SetDevcontainerName(f.Name(), "newName")
+	assert.NoError(t, err)
+
+	buf, err := ioutil.ReadFile(f.Name())
+	assert.NoError(t, err)
+
+	assert.Equal(t, `{
+	"name": "newName",
+	// here's a comment!
+	"otherProperties": [
+		"something-newName",
+		"here-newName"
+	]
+}`, string(buf))
+}
+
 func TestGetTemplateFolders_ListsFoldersWithDevcontainers(t *testing.T) {
 
 	root, err := ioutil.TempDir("", "devcontainer*")
@@ -110,11 +141,11 @@ func TestGetTemplateFolders_ListsFoldersWithDevcontainers(t *testing.T) {
 
 	folders := []string{root}
 
-	os.MkdirAll(filepath.Join(root, "test1", ".devcontainer"), 0755)
-	ioutil.WriteFile(filepath.Join(root, "test1", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
+	_ = os.MkdirAll(filepath.Join(root, "test1", ".devcontainer"), 0755)
+	_ = ioutil.WriteFile(filepath.Join(root, "test1", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
 
-	os.MkdirAll(filepath.Join(root, "test2", ".devcontainer"), 0755)
-	ioutil.WriteFile(filepath.Join(root, "test2", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
+	_ = os.MkdirAll(filepath.Join(root, "test2", ".devcontainer"), 0755)
+	_ = ioutil.WriteFile(filepath.Join(root, "test2", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
 
 	templates, err := getTemplatesFromFolders(folders)
 	assert.NoError(t, err)
@@ -143,11 +174,11 @@ func TestGetTemplateFolders_TakesFolderInPrioirtyOrder(t *testing.T) {
 
 	folders := []string{root1, root2}
 
-	os.MkdirAll(filepath.Join(root1, "test1", ".devcontainer"), 0755)
-	ioutil.WriteFile(filepath.Join(root1, "test1", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
+	_ = os.MkdirAll(filepath.Join(root1, "test1", ".devcontainer"), 0755)
+	_ = ioutil.WriteFile(filepath.Join(root1, "test1", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
 
-	os.MkdirAll(filepath.Join(root2, "test1", ".devcontainer"), 0755)
-	ioutil.WriteFile(filepath.Join(root2, "test1", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
+	_ = os.MkdirAll(filepath.Join(root2, "test1", ".devcontainer"), 0755)
+	_ = ioutil.WriteFile(filepath.Join(root2, "test1", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
 
 	templates, err := getTemplatesFromFolders(folders)
 	assert.NoError(t, err)
@@ -172,11 +203,11 @@ func TestGetTemplateFolders_IgnoresFolderWithoutDevcontainer(t *testing.T) {
 
 	folders := []string{root1, root2}
 
-	os.MkdirAll(filepath.Join(root1, "test1", ".devcontainer"), 0755)
-	ioutil.WriteFile(filepath.Join(root1, "test1", ".devcontainer", "not-a-devcontainer.json"), []byte{}, 0755)
+	_ = os.MkdirAll(filepath.Join(root1, "test1", ".devcontainer"), 0755)
+	_ = ioutil.WriteFile(filepath.Join(root1, "test1", ".devcontainer", "not-a-devcontainer.json"), []byte{}, 0755)
 
-	os.MkdirAll(filepath.Join(root2, "test1", ".devcontainer"), 0755)
-	ioutil.WriteFile(filepath.Join(root2, "test1", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
+	_ = os.MkdirAll(filepath.Join(root2, "test1", ".devcontainer"), 0755)
+	_ = ioutil.WriteFile(filepath.Join(root2, "test1", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
 
 	templates, err := getTemplatesFromFolders(folders)
 	assert.NoError(t, err)

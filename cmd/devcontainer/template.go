@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"sort"
 	"text/tabwriter"
 
@@ -93,22 +92,10 @@ func createTemplateAddCommand() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("Error reading current directory: %s\n", err)
 			}
-			if err = ioutil2.CopyFolder(template.Path, currentDirectory+"/.devcontainer"); err != nil {
-				return fmt.Errorf("Error copying folder: %s\n", err)
-			}
 
-			// by default the "name" in devcontainer.json is set to the name of the template
-			// override it here with the value passed in as --devcontainer-name (or the containing folder if not set)
-			if devcontainerName == "" {
-				devcontainerName, err = devcontainers.GetDefaultDevcontainerNameForFolder(currentDirectory)
-				if err != nil {
-					return fmt.Errorf("Error getting default devcontainer name: %s", err)
-				}
-			}
-			devcontainerJsonPath := filepath.Join(currentDirectory, ".devcontainer/devcontainer.json")
-			err = devcontainers.SetDevcontainerName(devcontainerJsonPath, devcontainerName)
+			err = devcontainers.CopyTemplateToFolder(template.Path, currentDirectory, devcontainerName)
 			if err != nil {
-				return fmt.Errorf("Error setting devcontainer name: %s", err)
+				return err
 			}
 
 			return nil
