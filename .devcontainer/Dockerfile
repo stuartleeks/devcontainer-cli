@@ -47,7 +47,7 @@ ENV GO111MODULE=on
 # Install Go tools
 RUN \
     # --> Delve for debugging
-    go get github.com/go-delve/delve/cmd/dlv@v1.3.2 \
+    go get github.com/go-delve/delve/cmd/dlv@v1.6.0 \
     # --> Go language server
     && go get golang.org/x/tools/gopls@v0.6.10 \
     # --> Go symbols and outline for go to symbol support and test support 
