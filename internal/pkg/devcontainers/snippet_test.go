@@ -220,6 +220,17 @@ func TestFolderAddSnippet_MergesDevcontainerJSON(t *testing.T) {
 	// set up snippet
 	snippetFolder := filepath.Join(root, "snippets/test1")
 	_ = os.MkdirAll(snippetFolder, 0755)
+	snippetJSONFilename := filepath.Join(snippetFolder, "snippet.json")
+	_ = ioutil.WriteFile(snippetJSONFilename, []byte(`{
+		"actions": [
+			{
+				"type": "mergeJSON",
+				"source": "devcontainer.json",
+				"target": ".devcontainer/devcontainer.json"
+			}
+		]
+	}`), 0755)
+
 	snippetDevcontainerFilename := filepath.Join(snippetFolder, "devcontainer.json")
 	_ = ioutil.WriteFile(snippetDevcontainerFilename, []byte(`// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/go

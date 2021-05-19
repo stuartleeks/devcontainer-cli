@@ -2,6 +2,7 @@ package devcontainers
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -33,6 +34,24 @@ type DevcontainerSnippet struct {
 	Type DevcontainerSnippetType
 	// Path is the path to either the path to the single script file or to the directory for multi-file snippets
 	Path string
+}
+
+type FolderSnippetActionType string
+
+const (
+	FolderSnippetActionMergeJSON  FolderSnippetActionType = "mergeJSON"  // merge JSON file from snippet with target JSON file
+	FolderSnippetActionCopyAndRun FolderSnippetActionType = "copyAndRun" // COPY and RUN script from snippet in the Dockerfile (as with single-file snippet)
+)
+
+type FolderSnippetAction struct {
+	Type       FolderSnippetActionType `json:"type"`
+	SourcePath string                  `json:"source"` // for mergeJSON this is snippet-relative path to JSON
+	TargetPath string                  `json:"target"` // for mergeJSON this is project-relative path to JSON
+}
+
+// FolderSnippet maps to the content of the snippet.json file for folder-based snippets
+type FolderSnippet struct {
+	Actions []FolderSnippetAction `json:"actions"`
 }
 
 // GetSnippetByName returns the template with the specified name or nil if not found
@@ -126,7 +145,6 @@ func getSnippetsFromFolder(folder string) ([]DevcontainerSnippet, error) {
 }
 
 func AddSnippetToDevcontainer(projectFolder string, snippetName string) error {
-
 	snippet, err := GetSnippetByName(snippetName)
 	if err != nil {
 		return err
@@ -218,31 +236,57 @@ func addFolderSnippetToDevContainer(projectFolder string, snippet *DevcontainerS
 		return fmt.Errorf("Expected folder snippet")
 	}
 
-	snippetDevcontainerJSONPath := filepath.Join(snippet.Path, "devcontainer.json")
-	snippetDevcontainerJSONInfo, err := os.Stat(snippetDevcontainerJSONPath)
-	if err == nil && !snippetDevcontainerJSONInfo.IsDir() {
-		projectDevcontainerFilename := filepath.Join(projectFolder, ".devcontainer", "devcontainer.json")
-		baseDocument, err := loadJSONDocument(projectDevcontainerFilename)
-		if err != nil {
-			return err
-		}
-
-		snippetDocument, err := loadJSONDocument(snippetDevcontainerJSONPath)
-		if err != nil {
-			return err
-		}
-
-		resultDocument, err := dora_merge.MergeJSON(*baseDocument, *snippetDocument)
-		if err != nil {
-			return err
-		}
-
-		resultJSON, err := dora_ast.WriteJSONString(resultDocument)
-
-		ioutil.WriteFile(projectDevcontainerFilename, []byte(resultJSON), 0666)
+	snippetJSONPath := filepath.Join(snippet.Path, "snippet.json")
+	buf, err := ioutil.ReadFile(snippetJSONPath)
+	if err != nil {
+		return err
+	}
+	var snippetJSON FolderSnippet
+	err = json.Unmarshal(buf, &snippetJSON)
+	if err != nil {
+		return err
 	}
 
-	// TODO handle snippet.json actions
+	for _, action := range snippetJSON.Actions {
+		switch action.Type {
+		case FolderSnippetActionMergeJSON:
+			err = mergeJSON(projectFolder, snippet, action.SourcePath, action.TargetPath)
+			if err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unhandled action type: %q", action.Type)
+		}
+	}
+
+	return nil
+}
+
+func mergeJSON(projectFolder string, snippet *DevcontainerSnippet, relativeMergePath string, relativeBasePath string) error {
+	mergePath := filepath.Join(snippet.Path, relativeMergePath)
+	_, err := os.Stat(mergePath)
+	if err != nil {
+		return err
+	}
+	basePath := filepath.Join(projectFolder, relativeBasePath)
+	baseDocument, err := loadJSONDocument(basePath)
+	if err != nil {
+		return err
+	}
+
+	mergeDocument, err := loadJSONDocument(mergePath)
+	if err != nil {
+		return err
+	}
+
+	resultDocument, err := dora_merge.MergeJSON(*baseDocument, *mergeDocument)
+	if err != nil {
+		return err
+	}
+
+	resultJSON, err := dora_ast.WriteJSONString(resultDocument)
+
+	ioutil.WriteFile(basePath, []byte(resultJSON), 0666)
 
 	return nil
 }
