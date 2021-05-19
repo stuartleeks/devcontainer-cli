@@ -329,6 +329,9 @@ func mergeJSON(projectFolder string, snippet *DevcontainerSnippet, relativeMerge
 	}
 
 	resultJSON, err := dora_ast.WriteJSONString(resultDocument)
+	if err != nil {
+		return err
+	}
 
 	// replace __DEVCONTAINER_NAME__ with name
 	devcontainerName, devcontainerUserName := getDevcontainerNameAndUserName(filepath.Join(projectFolder, ".devcontainer/devcontainer.json"))
@@ -346,7 +349,10 @@ func mergeJSON(projectFolder string, snippet *DevcontainerSnippet, relativeMerge
 	resultJSON = strings.ReplaceAll(resultJSON, "__DEVCONTAINER_USER_NAME__", devcontainerUserName)
 	resultJSON = strings.ReplaceAll(resultJSON, "__DEVCONTAINER_HOME__", devcontainerHome)
 
-	ioutil.WriteFile(basePath, []byte(resultJSON), 0666)
+	err = ioutil.WriteFile(basePath, []byte(resultJSON), 0666)
+	if err != nil {
+		return fmt.Errorf("failed to write file: %s", err)
+	}
 
 	return nil
 }

@@ -74,7 +74,7 @@ func TestGetSnippets_ListsFolderTemplate(t *testing.T) {
 
 	folders := []string{root1, root2}
 
-	os.MkdirAll(filepath.Join(root1, "test1"), 0755)
+	_ = os.MkdirAll(filepath.Join(root1, "test1"), 0755)
 	_ = ioutil.WriteFile(filepath.Join(root1, "test1/snippet.json"), []byte{}, 0755)
 	_ = ioutil.WriteFile(filepath.Join(root2, "test1.sh"), []byte{}, 0755)
 
@@ -121,7 +121,7 @@ func TestGetSnippets_TakesFilesInPriorityOrder(t *testing.T) {
 
 func TestSingleFileAddSnippet_NoInsertionPoint(t *testing.T) {
 
-	root, err := ioutil.TempDir("", "devcontainer*")
+	root, _ := ioutil.TempDir("", "devcontainer*")
 	defer os.RemoveAll(root)
 
 	// set up snippet
@@ -145,7 +145,7 @@ RUN echo hi
 		Path: snippetFilename,
 		Type: DevcontainerSnippetTypeSingleFile,
 	}
-	err = addSingleFileSnippetToDevContainer(targetFolder, &snippet)
+	err := addSingleFileSnippetToDevContainer(targetFolder, &snippet)
 	assert.NoError(t, err)
 
 	buf, err := ioutil.ReadFile(filepath.Join(devcontainerFolder, "scripts", "test1.sh"))
@@ -164,7 +164,7 @@ RUN /tmp/test1.sh
 }
 func TestSingleFileAddSnippet_WithInsertionPoint(t *testing.T) {
 
-	root, err := ioutil.TempDir("", "devcontainer*")
+	root, _ := ioutil.TempDir("", "devcontainer*")
 	defer os.RemoveAll(root)
 
 	// set up snippet
@@ -191,7 +191,7 @@ RUN echo hi2
 		Path: snippetFilename,
 		Type: DevcontainerSnippetTypeSingleFile,
 	}
-	err = addSingleFileSnippetToDevContainer(targetFolder, &snippet)
+	err := addSingleFileSnippetToDevContainer(targetFolder, &snippet)
 	assert.NoError(t, err)
 
 	buf, err := ioutil.ReadFile(filepath.Join(devcontainerFolder, "scripts", "test1.sh"))
@@ -214,7 +214,7 @@ RUN echo hi2
 
 func TestFolderAddSnippet_MergesDevcontainerJSON(t *testing.T) {
 
-	root, err := ioutil.TempDir("", "devcontainer*")
+	root, _ := ioutil.TempDir("", "devcontainer*")
 	defer os.RemoveAll(root)
 
 	// set up snippet
@@ -305,7 +305,7 @@ func TestFolderAddSnippet_MergesDevcontainerJSON(t *testing.T) {
 		Path: snippetFolder,
 		Type: DevcontainerSnippetTypeFolder,
 	}
-	err = addSnippetToDevcontainer(targetFolder, &snippet)
+	err := addSnippetToDevcontainer(targetFolder, &snippet)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -365,7 +365,7 @@ func TestFolderAddSnippet_MergesDevcontainerJSON(t *testing.T) {
 
 func TestFolderAddSnippet_CopiesScriptAndUpdatesDockerfile(t *testing.T) {
 
-	root, err := ioutil.TempDir("", "devcontainer*")
+	root, _ := ioutil.TempDir("", "devcontainer*")
 	defer os.RemoveAll(root)
 
 	// set up snippet
@@ -403,7 +403,7 @@ RUN echo hi2
 		Path: snippetFolder,
 		Type: DevcontainerSnippetTypeFolder,
 	}
-	err = addSnippetToDevcontainer(targetFolder, &snippet)
+	err := addSnippetToDevcontainer(targetFolder, &snippet)
 	if !assert.NoError(t, err) {
 		return
 	}
@@ -429,7 +429,7 @@ RUN echo hi2
 
 func TestFolderAddSnippet_InsertsSnippetsInDockerfile(t *testing.T) {
 
-	root, err := ioutil.TempDir("", "devcontainer*")
+	root, _ := ioutil.TempDir("", "devcontainer*")
 	defer os.RemoveAll(root)
 
 	// set up snippet
@@ -468,7 +468,7 @@ RUN echo hi2
 		Path: snippetFolder,
 		Type: DevcontainerSnippetTypeFolder,
 	}
-	err = addSnippetToDevcontainer(targetFolder, &snippet)
+	err := addSnippetToDevcontainer(targetFolder, &snippet)
 	if !assert.NoError(t, err) {
 		return
 	}
