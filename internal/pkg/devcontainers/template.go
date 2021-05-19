@@ -160,7 +160,6 @@ func SetDevcontainerName(devContainerJsonPath string, name string) error {
 }
 
 // "remoteUser": "vscode"
-
 func GetDevContainerUserName(devContainerJsonPath string) (string, error) {
 	buf, err := ioutil.ReadFile(devContainerJsonPath)
 	if err != nil {

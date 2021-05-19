@@ -15,6 +15,7 @@ import (
 	ioutil2 "github.com/stuartleeks/devcontainer-cli/internal/pkg/ioutil"
 
 	dora_ast "github.com/bradford-hamilton/dora/pkg/ast"
+	"github.com/bradford-hamilton/dora/pkg/dora"
 	dora_lexer "github.com/bradford-hamilton/dora/pkg/lexer"
 	dora_merge "github.com/bradford-hamilton/dora/pkg/merge"
 	dora_parser "github.com/bradford-hamilton/dora/pkg/parser"
@@ -172,15 +173,15 @@ func addSingleFileSnippetToDevContainer(projectFolder string, snippet *Devcontai
 	}
 	snippetBasePath, scriptFilename := filepath.Split(snippet.Path)
 
-	err := copyAndRunScriptFile(projectFolder, snippet, snippetBasePath, scriptFilename)
+	scriptFolderPath := filepath.Join(projectFolder, ".devcontainer", "scripts")
+	err := copyAndRunScriptFile(projectFolder, snippet, snippetBasePath, scriptFolderPath, scriptFilename)
 	return err
 }
-func copyAndRunScriptFile(projectFolder string, snippet *DevcontainerSnippet, snippetBasePath string, scriptFilename string) error {
-	scriptFolderPath := filepath.Join(projectFolder, ".devcontainer", "scripts")
-	if err := os.MkdirAll(scriptFolderPath, 0755); err != nil {
+func copyAndRunScriptFile(projectFolder string, snippet *DevcontainerSnippet, snippetBasePath string, targetPath, scriptFilename string) error {
+	if err := os.MkdirAll(targetPath, 0755); err != nil {
 		return err
 	}
-	if err := ioutil2.CopyFile(filepath.Join(snippetBasePath, scriptFilename), filepath.Join(scriptFolderPath, scriptFilename), 0755); err != nil {
+	if err := ioutil2.CopyFile(filepath.Join(snippetBasePath, scriptFilename), filepath.Join(targetPath, scriptFilename), 0755); err != nil {
 		return err
 	}
 
@@ -202,6 +203,17 @@ RUN /tmp/%[2]s
 	addedSnippetContent := false
 	var newContent bytes.Buffer
 	for _, line := range dockerFileLines {
+		if strings.Contains(line, "__DEVCONTAINER_SNIPPET_INSERT__") {
+			if _, err = newContent.WriteString(snippetContent); err != nil {
+				return err
+			}
+			if _, err = newContent.WriteString("\n"); err != nil {
+				return err
+			}
+			addedSnippetContent = true
+			addSeparator = false // avoid extra separator
+		}
+
 		if addSeparator {
 			if _, err = newContent.WriteString("\n"); err != nil {
 				return err
@@ -210,17 +222,6 @@ RUN /tmp/%[2]s
 		addSeparator = true
 		if _, err = newContent.WriteString(line); err != nil {
 			return err
-		}
-
-		if strings.Contains(line, "__DEVCONTAINER_SNIPPET_INSERT__") {
-			if _, err = newContent.WriteString("\n"); err != nil {
-				return err
-			}
-			if _, err = newContent.WriteString(snippetContent); err != nil {
-				return err
-			}
-			addedSnippetContent = true
-			addSeparator = false // avoid extra separator
 		}
 	}
 
@@ -259,7 +260,10 @@ func addFolderSnippetToDevContainer(projectFolder string, snippet *DevcontainerS
 				return err
 			}
 		case FolderSnippetActionCopyAndRun:
-			err = copyAndRunScriptFile(projectFolder, snippet, snippet.Path, action.SourcePath)
+			targetPath := filepath.Join(projectFolder, ".devcontainer", "scripts")
+			sourceParent, sourceFileName := filepath.Split(action.SourcePath)
+			sourceBasePath := filepath.Join(snippet.Path, sourceParent)
+			err = copyAndRunScriptFile(projectFolder, snippet, sourceBasePath, targetPath, sourceFileName)
 			if err != nil {
 				return err
 			}
@@ -295,6 +299,13 @@ func mergeJSON(projectFolder string, snippet *DevcontainerSnippet, relativeMerge
 
 	resultJSON, err := dora_ast.WriteJSONString(resultDocument)
 
+	// replace __DEVCONTAINER_NAME__ with name
+	devcontainerName, err := getDevcontainerName(filepath.Join(projectFolder, ".devcontainer/devcontainer.json"))
+	if err != nil {
+		return err
+	}
+	resultJSON = strings.ReplaceAll(resultJSON, "__DEVCONTAINER_NAME__", devcontainerName)
+
 	ioutil.WriteFile(basePath, []byte(resultJSON), 0666)
 
 	return nil
@@ -313,4 +324,25 @@ func loadJSONDocument(path string) (*dora_ast.RootNode, error) {
 		return nil, err
 	}
 	return &baseDocument, nil
+}
+
+func getDevcontainerName(devContainerJsonPath string) (string, error) {
+	// This doesn't use standard `json` pkg as devcontainer.json permits comments (and the default templates include them!)
+
+	buf, err := ioutil.ReadFile(devContainerJsonPath)
+	if err != nil {
+		return "", err
+	}
+
+	c, err := dora.NewFromBytes(buf)
+	if err != nil {
+		return "", err
+	}
+
+	name, err := c.GetString("$.name")
+	if err != nil {
+		return "", err
+	}
+
+	return name, nil
 }

@@ -202,11 +202,11 @@ RUN echo hi2
 	assert.NoError(t, err)
 	assert.Equal(t, `FROM foo
 RUN echo hi
-# __DEVCONTAINER_SNIPPET_INSERT__ 
-
 # test
 COPY scripts/test1.sh /tmp/
 RUN /tmp/test1.sh
+
+# __DEVCONTAINER_SNIPPET_INSERT__ 
 
 RUN echo hi2
 `, string(buf))
@@ -391,6 +391,7 @@ func TestFolderAddSnippet_CopiesScriptAndUpdatesDockerfile(t *testing.T) {
 
 	_ = ioutil.WriteFile(filepath.Join(devcontainerFolder, "Dockerfile"), []byte(`FROM foo
 RUN echo hi
+
 # __DEVCONTAINER_SNIPPET_INSERT__ 
 
 RUN echo hi2
@@ -415,11 +416,12 @@ RUN echo hi2
 	assert.NoError(t, err)
 	assert.Equal(t, `FROM foo
 RUN echo hi
-# __DEVCONTAINER_SNIPPET_INSERT__ 
 
 # test
 COPY scripts/script.sh /tmp/
 RUN /tmp/script.sh
+
+# __DEVCONTAINER_SNIPPET_INSERT__ 
 
 RUN echo hi2
 `, string(buf))
