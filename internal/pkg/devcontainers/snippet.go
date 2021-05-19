@@ -45,7 +45,7 @@ const (
 
 type FolderSnippetAction struct {
 	Type       FolderSnippetActionType `json:"type"`
-	SourcePath string                  `json:"source"` // for mergeJSON this is snippet-relative path to JSON
+	SourcePath string                  `json:"source"` // for mergeJSON this is snippet-relative path to JSON. for copyAndRun this is the script filename
 	TargetPath string                  `json:"target"` // for mergeJSON this is project-relative path to JSON
 }
 
@@ -170,13 +170,17 @@ func addSingleFileSnippetToDevContainer(projectFolder string, snippet *Devcontai
 	if snippet.Type != DevcontainerSnippetTypeSingleFile {
 		return fmt.Errorf("Expected single file snippet")
 	}
+	snippetBasePath, scriptFilename := filepath.Split(snippet.Path)
 
+	err := copyAndRunScriptFile(projectFolder, snippet, snippetBasePath, scriptFilename)
+	return err
+}
+func copyAndRunScriptFile(projectFolder string, snippet *DevcontainerSnippet, snippetBasePath string, scriptFilename string) error {
 	scriptFolderPath := filepath.Join(projectFolder, ".devcontainer", "scripts")
 	if err := os.MkdirAll(scriptFolderPath, 0755); err != nil {
 		return err
 	}
-	_, scriptFilename := filepath.Split(snippet.Path)
-	if err := ioutil2.CopyFile(snippet.Path, filepath.Join(scriptFolderPath, scriptFilename), 0755); err != nil {
+	if err := ioutil2.CopyFile(filepath.Join(snippetBasePath, scriptFilename), filepath.Join(scriptFolderPath, scriptFilename), 0755); err != nil {
 		return err
 	}
 
@@ -251,6 +255,11 @@ func addFolderSnippetToDevContainer(projectFolder string, snippet *DevcontainerS
 		switch action.Type {
 		case FolderSnippetActionMergeJSON:
 			err = mergeJSON(projectFolder, snippet, action.SourcePath, action.TargetPath)
+			if err != nil {
+				return err
+			}
+		case FolderSnippetActionCopyAndRun:
+			err = copyAndRunScriptFile(projectFolder, snippet, snippet.Path, action.SourcePath)
 			if err != nil {
 				return err
 			}

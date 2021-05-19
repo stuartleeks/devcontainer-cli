@@ -362,3 +362,65 @@ func TestFolderAddSnippet_MergesDevcontainerJSON(t *testing.T) {
 	"remoteUser": "vscode"
 }`, stringContent)
 }
+
+func TestFolderAddSnippet_CopiesScriptAndUpdatesDockerfile(t *testing.T) {
+
+	root, err := ioutil.TempDir("", "devcontainer*")
+	defer os.RemoveAll(root)
+
+	// set up snippet
+	snippetFolder := filepath.Join(root, "snippets/test1")
+	_ = os.MkdirAll(snippetFolder, 0755)
+	snippetJSONFilename := filepath.Join(snippetFolder, "snippet.json")
+	_ = ioutil.WriteFile(snippetJSONFilename, []byte(`{
+		"actions": [
+			{
+				"type": "copyAndRun",
+				"source": "script.sh"
+			}
+		]
+	}`), 0755)
+
+	scriptFilename := filepath.Join(snippetFolder, "script.sh")
+	_ = ioutil.WriteFile(scriptFilename, []byte("# dummy file"), 0755)
+
+	// set up devcontainer
+	targetFolder := filepath.Join(root, "target")
+	devcontainerFolder := filepath.Join(targetFolder, ".devcontainer")
+	_ = os.MkdirAll(devcontainerFolder, 0755)
+
+	_ = ioutil.WriteFile(filepath.Join(devcontainerFolder, "Dockerfile"), []byte(`FROM foo
+RUN echo hi
+# __DEVCONTAINER_SNIPPET_INSERT__ 
+
+RUN echo hi2
+`), 0755)
+
+	// Add snippet
+	snippet := DevcontainerSnippet{
+		Name: "test",
+		Path: snippetFolder,
+		Type: DevcontainerSnippetTypeFolder,
+	}
+	err = addSnippetToDevcontainer(targetFolder, &snippet)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	buf, err := ioutil.ReadFile(filepath.Join(devcontainerFolder, "scripts", "script.sh"))
+	assert.NoError(t, err)
+	assert.Equal(t, "# dummy file", string(buf))
+
+	buf, err = ioutil.ReadFile(filepath.Join(devcontainerFolder, "Dockerfile"))
+	assert.NoError(t, err)
+	assert.Equal(t, `FROM foo
+RUN echo hi
+# __DEVCONTAINER_SNIPPET_INSERT__ 
+
+# test
+COPY scripts/script.sh /tmp/
+RUN /tmp/script.sh
+
+RUN echo hi2
+`, string(buf))
+}
