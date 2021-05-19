@@ -63,6 +63,34 @@ func TestGetSnippets_IgnoresFilesWithIncorrectPrefix(t *testing.T) {
 
 	assert.ElementsMatch(t, expectedTemplates, snippets)
 }
+func TestGetSnippets_ListsFolderTemplate(t *testing.T) {
+
+	root1, err := ioutil.TempDir("", "devcontainer*")
+	assert.NoError(t, err)
+	defer os.RemoveAll(root1)
+	root2, err := ioutil.TempDir("", "devcontainer*")
+	assert.NoError(t, err)
+	defer os.RemoveAll(root1)
+
+	folders := []string{root1, root2}
+
+	os.MkdirAll(filepath.Join(root1, "test1"), 0755)
+	_ = ioutil.WriteFile(filepath.Join(root1, "test1/snippet.json"), []byte{}, 0755)
+	_ = ioutil.WriteFile(filepath.Join(root2, "test1.sh"), []byte{}, 0755)
+
+	snippets, err := getSnippetsFromFolders(folders)
+	assert.NoError(t, err)
+
+	expectedTemplates := []DevcontainerSnippet{
+		{
+			Name: "test1",
+			Type: DevcontainerSnippetTypeFolder,
+			Path: filepath.Join(root1, "test1"), // Uses root1 as it is in the list first
+		},
+	}
+
+	assert.ElementsMatch(t, expectedTemplates, snippets)
+}
 func TestGetSnippets_TakesFilesInPriorityOrder(t *testing.T) {
 
 	root1, err := ioutil.TempDir("", "devcontainer*")
@@ -182,4 +210,144 @@ RUN /tmp/test1.sh
 
 RUN echo hi2
 `, string(buf))
+}
+
+func TestFolderAddSnippet_MergesDevcontainerJSON(t *testing.T) {
+
+	root, err := ioutil.TempDir("", "devcontainer*")
+	defer os.RemoveAll(root)
+
+	// set up snippet
+	snippetFolder := filepath.Join(root, "snippets/test1")
+	_ = os.MkdirAll(snippetFolder, 0755)
+	snippetDevcontainerFilename := filepath.Join(snippetFolder, "devcontainer.json")
+	_ = ioutil.WriteFile(snippetDevcontainerFilename, []byte(`// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/go
+{
+	"runArgs": [
+		// Mount go mod cache
+		"-v", "devcontainer-cli-gomodcache:/go/pkg",
+	],
+
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"go.gopath": "/go",
+		"go.useLanguageServer": true,
+		"[go]": {
+			"editor.snippetSuggestions": "none",
+			"editor.formatOnSave": true,
+			"editor.codeActionsOnSave": {
+				"source.organizeImports": true,
+			}
+		},
+		"gopls": {
+			"usePlaceholders": true, // add parameter placeholders when completing a function
+			// Experimental settings
+			"completeUnimported": true, // autocomplete unimported packages
+			"watchFileChanges": true, // watch file changes outside of the editor
+			"deepCompletion": true, // enable deep completion
+		},
+	},
+	
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"stuartleeks.vscode-go-by-example",
+		"golang.go",
+	],
+}`), 0755)
+
+	// set up devcontainer
+	targetFolder := filepath.Join(root, "target")
+	devcontainerFolder := filepath.Join(targetFolder, ".devcontainer")
+	_ = os.MkdirAll(devcontainerFolder, 0755)
+
+	_ = ioutil.WriteFile(filepath.Join(devcontainerFolder, "devcontainer.json"), []byte(`// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/go
+{
+	"name": "test",
+	"dockerFile": "Dockerfile",
+	"runArgs": [
+		// Use host network
+		"--network=host",
+	],
+
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"terminal.integrated.shell.linux": "/bin/bash",
+	},
+	
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"example.test",
+	],
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode"
+}`), 0755)
+
+	// Add snippet
+	snippet := DevcontainerSnippet{
+		Name: "test",
+		Path: snippetFolder,
+		Type: DevcontainerSnippetTypeFolder,
+	}
+	err = addSnippetToDevcontainer(targetFolder, &snippet)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	buf, err := ioutil.ReadFile(filepath.Join(devcontainerFolder, "devcontainer.json"))
+	if !assert.NoError(t, err) {
+		return
+	}
+	stringContent := string(buf)
+	assert.Equal(t, `// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/go
+{
+	"name": "test",
+	"dockerFile": "Dockerfile",
+	"runArgs": [
+		// Use host network
+		"--network=host",
+		// Mount go mod cache
+		"-v", "devcontainer-cli-gomodcache:/go/pkg",
+	],
+
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"terminal.integrated.shell.linux": "/bin/bash",
+		"go.gopath": "/go",
+		"go.useLanguageServer": true,
+		"[go]": {
+			"editor.snippetSuggestions": "none",
+			"editor.formatOnSave": true,
+			"editor.codeActionsOnSave": {
+				"source.organizeImports": true,
+			}
+		},
+		"gopls": {
+			"usePlaceholders": true, // add parameter placeholders when completing a function
+			// Experimental settings
+			"completeUnimported": true, // autocomplete unimported packages
+			"watchFileChanges": true, // watch file changes outside of the editor
+			"deepCompletion": true, // enable deep completion
+		},
+	},
+	
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"example.test",
+		"stuartleeks.vscode-go-by-example",
+		"golang.go",
+	],
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode"
+}`, stringContent)
 }

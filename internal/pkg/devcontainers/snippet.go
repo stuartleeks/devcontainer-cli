@@ -12,6 +12,11 @@ import (
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/errors"
 	ioutil2 "github.com/stuartleeks/devcontainer-cli/internal/pkg/ioutil"
+
+	dora_ast "github.com/bradford-hamilton/dora/pkg/ast"
+	dora_lexer "github.com/bradford-hamilton/dora/pkg/lexer"
+	dora_merge "github.com/bradford-hamilton/dora/pkg/merge"
+	dora_parser "github.com/bradford-hamilton/dora/pkg/parser"
 )
 
 type DevcontainerSnippetType string
@@ -95,6 +100,17 @@ func getSnippetsFromFolder(folder string) ([]DevcontainerSnippet, error) {
 		}
 		if entry.IsDir() {
 			// TODO!
+			snippetJSONPath := filepath.Join(folder, entry.Name(), "snippet.json")
+			snippetJSONInfo, err := os.Stat(snippetJSONPath)
+			if err != nil || snippetJSONInfo.IsDir() {
+				continue
+			}
+			snippet := DevcontainerSnippet{
+				Name: entry.Name(),
+				Type: DevcontainerSnippetTypeFolder,
+				Path: filepath.Join(folder, entry.Name()),
+			}
+			snippets = append(snippets, snippet)
 		} else {
 			if strings.HasSuffix(entry.Name(), ".sh") {
 				snippet := DevcontainerSnippet{
@@ -124,6 +140,8 @@ func addSnippetToDevcontainer(projectFolder string, snippet *DevcontainerSnippet
 	switch snippet.Type {
 	case DevcontainerSnippetTypeSingleFile:
 		return addSingleFileSnippetToDevContainer(projectFolder, snippet)
+	case DevcontainerSnippetTypeFolder:
+		return addFolderSnippetToDevContainer(projectFolder, snippet)
 	default:
 		return fmt.Errorf("Unhandled snippet type: %q", snippet.Type)
 	}
@@ -193,4 +211,53 @@ RUN /tmp/%[2]s
 	err = ioutil.WriteFile(dockerfileFilename, newContent.Bytes(), 0)
 
 	return err
+}
+
+func addFolderSnippetToDevContainer(projectFolder string, snippet *DevcontainerSnippet) error {
+	if snippet.Type != DevcontainerSnippetTypeFolder {
+		return fmt.Errorf("Expected folder snippet")
+	}
+
+	snippetDevcontainerJSONPath := filepath.Join(snippet.Path, "devcontainer.json")
+	snippetDevcontainerJSONInfo, err := os.Stat(snippetDevcontainerJSONPath)
+	if err == nil && !snippetDevcontainerJSONInfo.IsDir() {
+		projectDevcontainerFilename := filepath.Join(projectFolder, ".devcontainer", "devcontainer.json")
+		baseDocument, err := loadJSONDocument(projectDevcontainerFilename)
+		if err != nil {
+			return err
+		}
+
+		snippetDocument, err := loadJSONDocument(snippetDevcontainerJSONPath)
+		if err != nil {
+			return err
+		}
+
+		resultDocument, err := dora_merge.MergeJSON(*baseDocument, *snippetDocument)
+		if err != nil {
+			return err
+		}
+
+		resultJSON, err := dora_ast.WriteJSONString(resultDocument)
+
+		ioutil.WriteFile(projectDevcontainerFilename, []byte(resultJSON), 0666)
+	}
+
+	// TODO handle snippet.json actions
+
+	return nil
+}
+
+func loadJSONDocument(path string) (*dora_ast.RootNode, error) {
+
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	l := dora_lexer.New(string(buf))
+	p := dora_parser.New(l)
+	baseDocument, err := p.ParseJSON()
+	if err != nil {
+		return nil, err
+	}
+	return &baseDocument, nil
 }
