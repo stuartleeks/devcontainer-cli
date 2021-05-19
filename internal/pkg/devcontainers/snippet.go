@@ -40,14 +40,16 @@ type DevcontainerSnippet struct {
 type FolderSnippetActionType string
 
 const (
-	FolderSnippetActionMergeJSON  FolderSnippetActionType = "mergeJSON"  // merge JSON file from snippet with target JSON file
-	FolderSnippetActionCopyAndRun FolderSnippetActionType = "copyAndRun" // COPY and RUN script from snippet in the Dockerfile (as with single-file snippet)
+	FolderSnippetActionMergeJSON         FolderSnippetActionType = "mergeJSON"         // merge JSON file from snippet with target JSON file
+	FolderSnippetActionCopyAndRun        FolderSnippetActionType = "copyAndRun"        // COPY and RUN script from snippet in the Dockerfile (as with single-file snippet)
+	FolderSnippetActionDockerfileSnippet FolderSnippetActionType = "dockerfileSnippet" // snippet to include as-is in the Dockerfile
 )
 
 type FolderSnippetAction struct {
 	Type       FolderSnippetActionType `json:"type"`
-	SourcePath string                  `json:"source"` // for mergeJSON this is snippet-relative path to JSON. for copyAndRun this is the script filename
-	TargetPath string                  `json:"target"` // for mergeJSON this is project-relative path to JSON
+	SourcePath string                  `json:"source"`  // for mergeJSON this is snippet-relative path to JSON. for copyAndRun this is the script filename
+	TargetPath string                  `json:"target"`  // for mergeJSON this is project-relative path to JSON
+	Content    string                  `json:"content"` // for dockerfileSnippet this is the content to include
 }
 
 // FolderSnippet maps to the content of the snippet.json file for folder-based snippets
@@ -177,64 +179,6 @@ func addSingleFileSnippetToDevContainer(projectFolder string, snippet *Devcontai
 	err := copyAndRunScriptFile(projectFolder, snippet, snippetBasePath, scriptFolderPath, scriptFilename)
 	return err
 }
-func copyAndRunScriptFile(projectFolder string, snippet *DevcontainerSnippet, snippetBasePath string, targetPath, scriptFilename string) error {
-	if err := os.MkdirAll(targetPath, 0755); err != nil {
-		return err
-	}
-	if err := ioutil2.CopyFile(filepath.Join(snippetBasePath, scriptFilename), filepath.Join(targetPath, scriptFilename), 0755); err != nil {
-		return err
-	}
-
-	dockerfileFilename := filepath.Join(projectFolder, ".devcontainer", "Dockerfile")
-	buf, err := ioutil.ReadFile(dockerfileFilename)
-	if err != nil {
-		return fmt.Errorf("Error reading Dockerfile: %s", err)
-	}
-
-	snippetContent := fmt.Sprintf(`
-# %[1]s
-COPY scripts/%[2]s /tmp/
-RUN /tmp/%[2]s
-`, snippet.Name, scriptFilename)
-
-	dockerfileContent := string(buf)
-	dockerFileLines := strings.Split(dockerfileContent, "\n")
-	addSeparator := false
-	addedSnippetContent := false
-	var newContent bytes.Buffer
-	for _, line := range dockerFileLines {
-		if strings.Contains(line, "__DEVCONTAINER_SNIPPET_INSERT__") {
-			if _, err = newContent.WriteString(snippetContent); err != nil {
-				return err
-			}
-			if _, err = newContent.WriteString("\n"); err != nil {
-				return err
-			}
-			addedSnippetContent = true
-			addSeparator = false // avoid extra separator
-		}
-
-		if addSeparator {
-			if _, err = newContent.WriteString("\n"); err != nil {
-				return err
-			}
-		}
-		addSeparator = true
-		if _, err = newContent.WriteString(line); err != nil {
-			return err
-		}
-	}
-
-	if !addedSnippetContent {
-		if _, err = newContent.WriteString(snippetContent); err != nil {
-			return err
-		}
-	}
-
-	err = ioutil.WriteFile(dockerfileFilename, newContent.Bytes(), 0)
-
-	return err
-}
 
 func addFolderSnippetToDevContainer(projectFolder string, snippet *DevcontainerSnippet) error {
 	if snippet.Type != DevcontainerSnippetTypeFolder {
@@ -255,15 +199,33 @@ func addFolderSnippetToDevContainer(projectFolder string, snippet *DevcontainerS
 	for _, action := range snippetJSON.Actions {
 		switch action.Type {
 		case FolderSnippetActionMergeJSON:
+			if action.SourcePath == "" {
+				return fmt.Errorf("source must be set for %s actions", action.Type)
+			}
+			if action.TargetPath == "" {
+				return fmt.Errorf("target must be set for %s actions", action.Type)
+			}
 			err = mergeJSON(projectFolder, snippet, action.SourcePath, action.TargetPath)
 			if err != nil {
 				return err
 			}
 		case FolderSnippetActionCopyAndRun:
+			if action.SourcePath == "" {
+				return fmt.Errorf("source must be set for %s actions", action.Type)
+			}
 			targetPath := filepath.Join(projectFolder, ".devcontainer", "scripts")
 			sourceParent, sourceFileName := filepath.Split(action.SourcePath)
 			sourceBasePath := filepath.Join(snippet.Path, sourceParent)
 			err = copyAndRunScriptFile(projectFolder, snippet, sourceBasePath, targetPath, sourceFileName)
+			if err != nil {
+				return err
+			}
+		case FolderSnippetActionDockerfileSnippet:
+			if action.Content == "" {
+				return fmt.Errorf("content must be set for %s actions", action.Type)
+			}
+			dockerfileFilename := filepath.Join(projectFolder, ".devcontainer", "Dockerfile")
+			err = insertDockerfileSnippet(dockerfileFilename, action.Content+"\n")
 			if err != nil {
 				return err
 			}
@@ -275,6 +237,75 @@ func addFolderSnippetToDevContainer(projectFolder string, snippet *DevcontainerS
 	return nil
 }
 
+func copyAndRunScriptFile(projectFolder string, snippet *DevcontainerSnippet, snippetBasePath string, targetPath, scriptFilename string) error {
+	if err := os.MkdirAll(targetPath, 0755); err != nil {
+		return err
+	}
+	if err := ioutil2.CopyFile(filepath.Join(snippetBasePath, scriptFilename), filepath.Join(targetPath, scriptFilename), 0755); err != nil {
+		return err
+	}
+
+	snippetContent := fmt.Sprintf(`# %[1]s
+COPY scripts/%[2]s /tmp/
+RUN /tmp/%[2]s
+`, snippet.Name, scriptFilename)
+	dockerfileFilename := filepath.Join(projectFolder, ".devcontainer", "Dockerfile")
+
+	err := insertDockerfileSnippet(dockerfileFilename, snippetContent)
+	return err
+}
+
+func insertDockerfileSnippet(dockerfileFilename string, snippetContent string) error {
+
+	buf, err := ioutil.ReadFile(dockerfileFilename)
+	if err != nil {
+		return fmt.Errorf("Error reading Dockerfile: %s", err)
+	}
+
+	dockerfileContent := string(buf)
+	dockerFileLines := strings.Split(dockerfileContent, "\n")
+	addSeparator := false
+	addedSnippetContent := false
+	var newContent bytes.Buffer
+	for _, line := range dockerFileLines {
+		if addSeparator {
+			if _, err = newContent.WriteString("\n"); err != nil {
+				return err
+			}
+		}
+		addSeparator = true
+
+		if strings.Contains(line, "__DEVCONTAINER_SNIPPET_INSERT__") {
+			if _, err = newContent.WriteString(snippetContent); err != nil {
+				return err
+			}
+			if _, err = newContent.WriteString("\n"); err != nil {
+				return err
+			}
+			line += "\n"
+			addedSnippetContent = true
+			addSeparator = false // avoid extra separator
+		}
+
+		if _, err = newContent.WriteString(line); err != nil {
+			return err
+		}
+	}
+
+	if !addedSnippetContent {
+		if _, err = newContent.WriteString("\n"); err != nil {
+			return err
+		}
+		if _, err = newContent.WriteString(snippetContent); err != nil {
+			return err
+		}
+	}
+
+	err = ioutil.WriteFile(dockerfileFilename, newContent.Bytes(), 0)
+
+	return err
+
+}
 func mergeJSON(projectFolder string, snippet *DevcontainerSnippet, relativeMergePath string, relativeBasePath string) error {
 	mergePath := filepath.Join(snippet.Path, relativeMergePath)
 	_, err := os.Stat(mergePath)
@@ -300,11 +331,20 @@ func mergeJSON(projectFolder string, snippet *DevcontainerSnippet, relativeMerge
 	resultJSON, err := dora_ast.WriteJSONString(resultDocument)
 
 	// replace __DEVCONTAINER_NAME__ with name
-	devcontainerName, err := getDevcontainerName(filepath.Join(projectFolder, ".devcontainer/devcontainer.json"))
-	if err != nil {
-		return err
+	devcontainerName, devcontainerUserName := getDevcontainerNameAndUserName(filepath.Join(projectFolder, ".devcontainer/devcontainer.json"))
+	if devcontainerName == "" {
+		return fmt.Errorf("failed to get dev container name")
 	}
 	resultJSON = strings.ReplaceAll(resultJSON, "__DEVCONTAINER_NAME__", devcontainerName)
+	if devcontainerUserName == "" {
+		devcontainerUserName = "root"
+	}
+	devcontainerHome := "/home/" + devcontainerUserName
+	if devcontainerUserName == "root" {
+		devcontainerHome = "/root"
+	}
+	resultJSON = strings.ReplaceAll(resultJSON, "__DEVCONTAINER_USER_NAME__", devcontainerUserName)
+	resultJSON = strings.ReplaceAll(resultJSON, "__DEVCONTAINER_HOME__", devcontainerHome)
 
 	ioutil.WriteFile(basePath, []byte(resultJSON), 0666)
 
@@ -326,23 +366,27 @@ func loadJSONDocument(path string) (*dora_ast.RootNode, error) {
 	return &baseDocument, nil
 }
 
-func getDevcontainerName(devContainerJsonPath string) (string, error) {
+func getDevcontainerNameAndUserName(devContainerJsonPath string) (string, string) {
 	// This doesn't use standard `json` pkg as devcontainer.json permits comments (and the default templates include them!)
 
 	buf, err := ioutil.ReadFile(devContainerJsonPath)
 	if err != nil {
-		return "", err
+		return "", ""
 	}
 
 	c, err := dora.NewFromBytes(buf)
 	if err != nil {
-		return "", err
+		return "", ""
 	}
 
 	name, err := c.GetString("$.name")
 	if err != nil {
-		return "", err
+		name = ""
+	}
+	userName, err := c.GetString("$.remoteUser")
+	if err != nil {
+		userName = ""
 	}
 
-	return name, nil
+	return name, userName
 }

@@ -137,6 +137,9 @@ func CopyTemplateToFolder(templatePath string, targetFolder string, devcontainer
 func SetDevcontainerName(devContainerJsonPath string, name string) error {
 	// This doesn't use `json` as devcontainer.json permits comments (and the default templates include them!)
 
+	// TODO - update this to use dora to query
+	// TODO - update this to replace __DEVCONTAINER_USER_NAME__ and __DEVCONTAINER_HOME__
+
 	buf, err := ioutil.ReadFile(devContainerJsonPath)
 	if err != nil {
 		return fmt.Errorf("error reading file %q: %s", devContainerJsonPath, err)

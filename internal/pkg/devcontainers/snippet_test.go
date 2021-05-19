@@ -426,3 +426,65 @@ RUN /tmp/script.sh
 RUN echo hi2
 `, string(buf))
 }
+
+func TestFolderAddSnippet_InsertsSnippetsInDockerfile(t *testing.T) {
+
+	root, err := ioutil.TempDir("", "devcontainer*")
+	defer os.RemoveAll(root)
+
+	// set up snippet
+	snippetFolder := filepath.Join(root, "snippets/test1")
+	_ = os.MkdirAll(snippetFolder, 0755)
+	snippetJSONFilename := filepath.Join(snippetFolder, "snippet.json")
+	_ = ioutil.WriteFile(snippetJSONFilename, []byte(`{
+		"actions": [
+			{
+				"type": "dockerfileSnippet",
+				"content": "ENV FOO=BAR"
+			},
+			{
+				"type": "dockerfileSnippet",
+				"content": "# testing\nENV WIBBLE=BIBBLE"
+			}
+		]
+	}`), 0755)
+
+	// set up devcontainer
+	targetFolder := filepath.Join(root, "target")
+	devcontainerFolder := filepath.Join(targetFolder, ".devcontainer")
+	_ = os.MkdirAll(devcontainerFolder, 0755)
+
+	_ = ioutil.WriteFile(filepath.Join(devcontainerFolder, "Dockerfile"), []byte(`FROM foo
+RUN echo hi
+
+# __DEVCONTAINER_SNIPPET_INSERT__ 
+
+RUN echo hi2
+`), 0755)
+
+	// Add snippet
+	snippet := DevcontainerSnippet{
+		Name: "test",
+		Path: snippetFolder,
+		Type: DevcontainerSnippetTypeFolder,
+	}
+	err = addSnippetToDevcontainer(targetFolder, &snippet)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	buf, err := ioutil.ReadFile(filepath.Join(devcontainerFolder, "Dockerfile"))
+	assert.NoError(t, err)
+	assert.Equal(t, `FROM foo
+RUN echo hi
+
+ENV FOO=BAR
+
+# testing
+ENV WIBBLE=BIBBLE
+
+# __DEVCONTAINER_SNIPPET_INSERT__ 
+
+RUN echo hi2
+`, string(buf))
+}
