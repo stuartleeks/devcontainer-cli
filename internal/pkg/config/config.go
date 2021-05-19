@@ -20,6 +20,8 @@ func EnsureInitialised() {
 		viper.AddConfigPath(getConfigPath())
 
 		viper.SetDefault("templatePaths", []string{})
+		viper.SetDefault("settingPaths", []string{})
+		viper.SetDefault("experimental", false)
 
 		// TODO - allow env var for config
 		if err := viper.ReadInConfig(); err != nil {
@@ -47,6 +49,14 @@ func getConfigPath() string {
 func GetTemplateFolders() []string {
 	EnsureInitialised()
 	return viper.GetStringSlice("templatePaths")
+}
+func GetSnippetFolders() []string {
+	EnsureInitialised()
+	return viper.GetStringSlice("snippetPaths")
+}
+func GetExperimentalFeaturesEnabled() bool {
+	EnsureInitialised()
+	return viper.GetBool("experimental")
 }
 func GetLastUpdateCheck() time.Time {
 	EnsureInitialised()

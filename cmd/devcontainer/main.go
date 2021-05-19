@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/update"
 )
 
@@ -27,6 +28,9 @@ func main() {
 	rootCmd.AddCommand(createExecCommand())
 	rootCmd.AddCommand(createListCommand())
 	rootCmd.AddCommand(createTemplateCommand())
+	if config.GetExperimentalFeaturesEnabled() {
+		rootCmd.AddCommand(createSnippetCommand())
+	}
 	rootCmd.AddCommand(createUpdateCommand())
 	rootCmd.AddCommand(createOpenInCodeCommand())
 	rootCmd.AddCommand(createOpenInCodeInsidersCommand())

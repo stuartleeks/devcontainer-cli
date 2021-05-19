@@ -18,8 +18,10 @@ else
   fi
 fi
 
+sudo chown -R $(whoami) .
+
 # Set version for release (picked up later by goreleaser)
-sudo git tag -f v0.1.$BUILD_NUMBER
+git tag -f v0.1.$BUILD_NUMBER
 
 export GOVERSION=$(go version)
 

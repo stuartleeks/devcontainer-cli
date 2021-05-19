@@ -31,7 +31,7 @@ endif
 
 
 test:
-	go test -v ./...
+	richgo test -v ./...
 
 
 fmt:

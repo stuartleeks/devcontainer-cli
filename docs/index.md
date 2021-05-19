@@ -28,4 +28,4 @@ See the following topics for more information:
   * [open-in-code](open-in-code) - open dev containers in VS Code from the terminal
   * [template](template) - add dev container definitions to a folder
   * [exec](exec) - launch a terminal or other command in a dev container
-
+  * [snippet](snippet) - add snippets to an existing dev container definition **experimental**

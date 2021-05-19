@@ -40,7 +40,6 @@
 			"usePlaceholders": true, // add parameter placeholders when completing a function
 			// Experimental settings
 			"completeUnimported": true, // autocomplete unimported packages
-			"watchFileChanges": true, // watch file changes outside of the editor
 			"deepCompletion": true, // enable deep completion
 		},
 		"files.eol": "\n", // formatting only supports LF line endings		
@@ -49,15 +48,18 @@
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
 		"golang.go",
-		"stuartleeks.vscode-go-by-example"
-	]
+		"stuartleeks.vscode-go-by-example",
+		"darkriszty.markdown-table-prettify",
+        "davidanson.vscode-markdownlint",
+        "mushan.vscode-paste-image"
+	],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "go version",
+	"postCreateCommand": "sudo chown $(whoami) /go/pkg",
 
 	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
-	// "remoteUser": "vscode"
+	"remoteUser": "vscode"
 }

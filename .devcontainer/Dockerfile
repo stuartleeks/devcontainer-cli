@@ -13,7 +13,7 @@ RUN apt-get update \
     && apt-get -y install --no-install-recommends apt-utils dialog nano sudo bsdmainutils \
     #
     # Verify git, process tools, lsb-release (common in install instructions for CLIs) installed
-    && apt-get -y install git iproute2 procps lsb-release \
+    && apt-get -y install git iproute2 procps lsb-release build-essential \
     # Install Release Tools
     #
     # --> RPM used by goreleaser
@@ -27,6 +27,17 @@ ARG USERNAME=vscode
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
+# Create the user
+RUN groupadd --gid $USER_GID $USERNAME \
+    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    && apt-get update \
+    && apt-get install -y sudo \
+    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME
+
+# Set default user
+USER $USERNAME
+
 # Set env for tracking that we're running in a devcontainer
 ENV DEVCONTAINER=true
 
@@ -36,18 +47,19 @@ ENV GO111MODULE=on
 # Install Go tools
 RUN \
     # --> Delve for debugging
-    go get github.com/go-delve/delve/cmd/dlv@v1.3.2 \
+    go get github.com/go-delve/delve/cmd/dlv@v1.6.0 \
     # --> Go language server
-    && go get golang.org/x/tools/gopls@v0.2.1 \
+    && go get golang.org/x/tools/gopls@v0.6.10 \
     # --> Go symbols and outline for go to symbol support and test support 
     && go get github.com/acroca/go-symbols@v0.1.1 && go get github.com/ramya-rao-a/go-outline@7182a932836a71948db4a81991a494751eccfe77 \
     # --> GolangCI-lint
     && curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sed 's/tar -/tar --no-same-owner -/g' | sh -s -- -b $(go env GOPATH)/bin \
     # --> Go releaser 
-    && curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh -s -- "v0.164.0"\
+    && curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh -s -- "v0.164.0" \
     # --> Install junit converter
     && go get github.com/jstemmer/go-junit-report@v0.9.1 \
-    && rm -rf /go/src/ && rm -rf /go/pkg
+    && sudo rm -rf /go/src/ \
+    && sudo rm -rf /go/pkg
 
 # Switch back to dialog for any ad-hoc use of apt-get
 ENV DEBIAN_FRONTEND=dialog
