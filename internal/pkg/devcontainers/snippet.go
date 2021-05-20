@@ -407,6 +407,17 @@ func getSubstitutionValuesFromFile(devContainerJsonPath string) (*SubstitutionVa
 	}, nil
 }
 
+func performSubstitutionFile(substitutionValues *SubstitutionValues, filename string) error {
+	buf, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	content := string(buf)
+	content = performSubstitutionString(substitutionValues, content)
+	err = ioutil.WriteFile(filename, []byte(content), 0)
+	return err
+}
+
 func performSubstitutionString(substitutionValues *SubstitutionValues, content string) string {
 	// replace __DEVCONTAINER_NAME__ with name etc
 	content = strings.ReplaceAll(content, "__DEVCONTAINER_NAME__", substitutionValues.Name)

@@ -113,7 +113,7 @@ func GetDefaultDevcontainerNameForFolder(folderPath string) (string, error) {
 func CopyTemplateToFolder(templatePath string, targetFolder string, devcontainerName string) error {
 	var err error
 
-	if err = ioutil2.CopyFolder(templatePath, targetFolder+"/.devcontainer"); err != nil {
+	if err = ioutil2.CopyFolder(templatePath, filepath.Join(targetFolder, ".devcontainer")); err != nil {
 		return fmt.Errorf("Error copying folder: %s\n", err)
 	}
 
@@ -125,12 +125,46 @@ func CopyTemplateToFolder(templatePath string, targetFolder string, devcontainer
 			return fmt.Errorf("Error getting default devcontainer name: %s", err)
 		}
 	}
-	devcontainerJsonPath := filepath.Join(targetFolder, ".devcontainer/devcontainer.json")
+	devcontainerJsonPath := filepath.Join(targetFolder, ".devcontainer", "devcontainer.json")
 	err = SetDevcontainerName(devcontainerJsonPath, devcontainerName)
 	if err != nil {
 		return fmt.Errorf("Error setting devcontainer name: %s", err)
 	}
 
+	values, err := getSubstitutionValuesFromFile(devcontainerJsonPath)
+	if err != nil {
+		return fmt.Errorf("Error getting substituion values: %s", err)
+	}
+	err = recursiveSubstituteValues(values, filepath.Join(targetFolder, ".devcontainer"))
+	if err != nil {
+		return fmt.Errorf("Error performing substitution: %s", err)
+	}
+
+	return nil
+}
+
+func recursiveSubstituteValues(values *SubstitutionValues, path string) error {
+	_, err := os.Stat(path)
+	if err != nil {
+		return fmt.Errorf("Error reading folder: %s\n", err)
+	}
+
+	subItems, err := ioutil.ReadDir(path)
+	if err != nil {
+		return fmt.Errorf("Error reading source folder contents: %s\n", err)
+	}
+
+	for _, subItem := range subItems {
+		if subItem.IsDir() {
+			if err = recursiveSubstituteValues(values, filepath.Join(path, subItem.Name())); err != nil {
+				return err
+			}
+		} else {
+			if err = performSubstitutionFile(values, filepath.Join(path, subItem.Name())); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 

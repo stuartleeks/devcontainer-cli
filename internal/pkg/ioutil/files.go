@@ -5,19 +5,18 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 )
-
-// TODO - recursive copy folder (also add recursive symlink)
 
 func CopyFolder(source string, target string) error {
 	copy := func(sourceFolder string, targetFolder string, item os.FileInfo) error {
-		return CopyFile(sourceFolder+"/"+item.Name(), targetFolder+"/"+item.Name(), item.Mode())
+		return CopyFile(filepath.Join(sourceFolder, item.Name()), filepath.Join(targetFolder, item.Name()), item.Mode())
 	}
 	return processFolder(source, target, copy)
 }
 func LinkFolder(source string, target string) error {
 	symlink := func(sourceFolder string, targetFolder string, item os.FileInfo) error {
-		return os.Symlink(sourceFolder+"/"+item.Name(), targetFolder+"/"+item.Name())
+		return os.Symlink(filepath.Join(sourceFolder, item.Name()), filepath.Join(targetFolder, item.Name()))
 	}
 	return processFolder(source, target, symlink)
 }
@@ -38,7 +37,7 @@ func processFolder(source string, target string, fileHandler func(sourceFolder s
 
 	for _, sourceSubItem := range sourceSubItems {
 		if sourceSubItem.IsDir() {
-			if err = processFolder(source+"/"+sourceSubItem.Name(), target+"/"+sourceSubItem.Name(), fileHandler); err != nil {
+			if err = processFolder(filepath.Join(source, sourceSubItem.Name()), filepath.Join(target, sourceSubItem.Name()), fileHandler); err != nil {
 				return err
 			}
 		} else {
