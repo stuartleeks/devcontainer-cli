@@ -1,7 +1,6 @@
 package devcontainers
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -225,7 +224,7 @@ func addFolderSnippetToDevContainer(projectFolder string, snippet *DevcontainerS
 				return fmt.Errorf("content must be set for %s actions", action.Type)
 			}
 			dockerfileFilename := filepath.Join(projectFolder, ".devcontainer", "Dockerfile")
-			err = insertDockerfileSnippet(dockerfileFilename, action.Content+"\n")
+			err = insertDockerfileSnippet(projectFolder, dockerfileFilename, action.Content+"\n")
 			if err != nil {
 				return err
 			}
@@ -251,11 +250,11 @@ RUN /tmp/%[2]s
 `, snippet.Name, scriptFilename)
 	dockerfileFilename := filepath.Join(projectFolder, ".devcontainer", "Dockerfile")
 
-	err := insertDockerfileSnippet(dockerfileFilename, snippetContent)
+	err := insertDockerfileSnippet(projectFolder, dockerfileFilename, snippetContent)
 	return err
 }
 
-func insertDockerfileSnippet(dockerfileFilename string, snippetContent string) error {
+func insertDockerfileSnippet(projectFolder string, dockerfileFilename string, snippetContent string) error {
 
 	buf, err := ioutil.ReadFile(dockerfileFilename)
 	if err != nil {
@@ -266,7 +265,7 @@ func insertDockerfileSnippet(dockerfileFilename string, snippetContent string) e
 	dockerFileLines := strings.Split(dockerfileContent, "\n")
 	addSeparator := false
 	addedSnippetContent := false
-	var newContent bytes.Buffer
+	var newContent strings.Builder
 	for _, line := range dockerFileLines {
 		if addSeparator {
 			if _, err = newContent.WriteString("\n"); err != nil {
@@ -301,7 +300,14 @@ func insertDockerfileSnippet(dockerfileFilename string, snippetContent string) e
 		}
 	}
 
-	err = ioutil.WriteFile(dockerfileFilename, newContent.Bytes(), 0)
+	content := newContent.String()
+	values, err := getSubstitutionValuesFromFile(filepath.Join(projectFolder, ".devcontainer/devcontainer.json"))
+	if err != nil {
+		return fmt.Errorf("failed to get dev container values: %s", err)
+	}
+	content = performSubstitutionString(values, content)
+
+	err = ioutil.WriteFile(dockerfileFilename, []byte(content), 0)
 
 	return err
 
@@ -333,21 +339,11 @@ func mergeJSON(projectFolder string, snippet *DevcontainerSnippet, relativeMerge
 		return err
 	}
 
-	// replace __DEVCONTAINER_NAME__ with name
-	devcontainerName, devcontainerUserName := getDevcontainerNameAndUserName(filepath.Join(projectFolder, ".devcontainer/devcontainer.json"))
-	if devcontainerName == "" {
-		return fmt.Errorf("failed to get dev container name")
+	values, err := getSubstitutionValuesFromFile(filepath.Join(projectFolder, ".devcontainer/devcontainer.json"))
+	if err != nil {
+		return fmt.Errorf("failed to get dev container values: %s", err)
 	}
-	resultJSON = strings.ReplaceAll(resultJSON, "__DEVCONTAINER_NAME__", devcontainerName)
-	if devcontainerUserName == "" {
-		devcontainerUserName = "root"
-	}
-	devcontainerHome := "/home/" + devcontainerUserName
-	if devcontainerUserName == "root" {
-		devcontainerHome = "/root"
-	}
-	resultJSON = strings.ReplaceAll(resultJSON, "__DEVCONTAINER_USER_NAME__", devcontainerUserName)
-	resultJSON = strings.ReplaceAll(resultJSON, "__DEVCONTAINER_HOME__", devcontainerHome)
+	resultJSON = performSubstitutionString(values, resultJSON)
 
 	err = ioutil.WriteFile(basePath, []byte(resultJSON), 0666)
 	if err != nil {
@@ -372,17 +368,23 @@ func loadJSONDocument(path string) (*dora_ast.RootNode, error) {
 	return &baseDocument, nil
 }
 
-func getDevcontainerNameAndUserName(devContainerJsonPath string) (string, string) {
+type SubstitutionValues struct {
+	Name       string
+	UserName   string
+	HomeFolder string
+}
+
+func getSubstitutionValuesFromFile(devContainerJsonPath string) (*SubstitutionValues, error) {
 	// This doesn't use standard `json` pkg as devcontainer.json permits comments (and the default templates include them!)
 
 	buf, err := ioutil.ReadFile(devContainerJsonPath)
 	if err != nil {
-		return "", ""
+		return nil, err
 	}
 
 	c, err := dora.NewFromBytes(buf)
 	if err != nil {
-		return "", ""
+		return nil, err
 	}
 
 	name, err := c.GetString("$.name")
@@ -391,8 +393,24 @@ func getDevcontainerNameAndUserName(devContainerJsonPath string) (string, string
 	}
 	userName, err := c.GetString("$.remoteUser")
 	if err != nil {
-		userName = ""
+		userName = "root"
+	}
+	homeFolder := "/home/" + userName
+	if userName == "root" {
+		homeFolder = "/root"
 	}
 
-	return name, userName
+	return &SubstitutionValues{
+		Name:       name,
+		UserName:   userName,
+		HomeFolder: homeFolder,
+	}, nil
+}
+
+func performSubstitutionString(substitutionValues *SubstitutionValues, content string) string {
+	// replace __DEVCONTAINER_NAME__ with name etc
+	content = strings.ReplaceAll(content, "__DEVCONTAINER_NAME__", substitutionValues.Name)
+	content = strings.ReplaceAll(content, "__DEVCONTAINER_USER_NAME__", substitutionValues.UserName)
+	content = strings.ReplaceAll(content, "__DEVCONTAINER_HOME__", substitutionValues.HomeFolder)
+	return content
 }
