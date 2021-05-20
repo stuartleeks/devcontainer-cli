@@ -551,11 +551,25 @@ func TestFolderAddSnippet_PerformsSubstitutionWithoutUserName(t *testing.T) {
 	_ = ioutil.WriteFile(snippetJSONFilename, []byte(`{
 		"actions": [
 			{
+				"type": "mergeJSON",
+				"source": "devcontainer.json",
+				"target": ".devcontainer/devcontainer.json"
+			},
+			{
 				"type": "dockerfileSnippet",
 				"content": "ENV DC_NAME=__DEVCONTAINER_NAME__\nENV DC_USER_NAME=__DEVCONTAINER_USER_NAME__\nENV DC_HOME=__DEVCONTAINER_HOME__"
 			}
 		]
 	}`), 0755)
+
+	snippetDevcontainerFilename := filepath.Join(snippetFolder, "devcontainer.json")
+	_ = ioutil.WriteFile(snippetDevcontainerFilename, []byte(`{
+	"settings": {
+		"DC_NAME": "__DEVCONTAINER_NAME__",
+		"DC_USER_NAME": "__DEVCONTAINER_USER_NAME__",
+		"DC_HOME": "__DEVCONTAINER_HOME__"
+	},
+}`), 0755)
 
 	// set up devcontainer
 	targetFolder := filepath.Join(root, "target")
@@ -599,6 +613,21 @@ ENV DC_HOME=/root
 
 RUN echo hi2
 `, string(buf))
+
+	buf, err = ioutil.ReadFile(filepath.Join(devcontainerFolder, "devcontainer.json"))
+	if !assert.NoError(t, err) {
+		return
+	}
+	stringContent := string(buf)
+	assert.Equal(t, `{
+	"name" : "testname",
+	"settings": {
+		"DC_NAME": "testname",
+		"DC_USER_NAME": "root",
+		"DC_HOME": "/root"
+	},
+}`, stringContent)
+
 }
 func TestFolderAddSnippet_PerformsSubstitutionWithUserName(t *testing.T) {
 
@@ -612,11 +641,25 @@ func TestFolderAddSnippet_PerformsSubstitutionWithUserName(t *testing.T) {
 	_ = ioutil.WriteFile(snippetJSONFilename, []byte(`{
 		"actions": [
 			{
+				"type": "mergeJSON",
+				"source": "devcontainer.json",
+				"target": ".devcontainer/devcontainer.json"
+			},
+			{
 				"type": "dockerfileSnippet",
 				"content": "ENV DC_NAME=__DEVCONTAINER_NAME__\nENV DC_USER_NAME=__DEVCONTAINER_USER_NAME__\nENV DC_HOME=__DEVCONTAINER_HOME__"
 			}
 		]
 	}`), 0755)
+
+	snippetDevcontainerFilename := filepath.Join(snippetFolder, "devcontainer.json")
+	_ = ioutil.WriteFile(snippetDevcontainerFilename, []byte(`{
+	"settings": {
+		"DC_NAME": "__DEVCONTAINER_NAME__",
+		"DC_USER_NAME": "__DEVCONTAINER_USER_NAME__",
+		"DC_HOME": "__DEVCONTAINER_HOME__"
+	},
+}`), 0755)
 
 	// set up devcontainer
 	targetFolder := filepath.Join(root, "target")
@@ -661,4 +704,20 @@ ENV DC_HOME=/home/dcuser
 
 RUN echo hi2
 `, string(buf))
+
+	buf, err = ioutil.ReadFile(filepath.Join(devcontainerFolder, "devcontainer.json"))
+	if !assert.NoError(t, err) {
+		return
+	}
+	stringContent := string(buf)
+	assert.Equal(t, `{
+	"name" : "testname",
+	"remoteUser": "dcuser",
+	"settings": {
+		"DC_NAME": "testname",
+		"DC_USER_NAME": "dcuser",
+		"DC_HOME": "/home/dcuser"
+	},
+}`, stringContent)
+
 }
