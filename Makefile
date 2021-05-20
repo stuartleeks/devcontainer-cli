@@ -36,3 +36,8 @@ test:
 
 fmt:
 	find . -name '*.go' | grep -v vendor | xargs gofmt -s -w
+
+
+post-create:
+	sudo chown vscode /go/pkg
+	go get -u github.com/kyoh86/richgo

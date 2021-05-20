@@ -82,11 +82,20 @@ Assuming you cloned [github.com/microsoft/vscode-dev-containers/](https://github
 }
 ```
 
+## Placeholder Values
+
+After content has been copied to the project folder from a template, the following placeholder values are substituted:
+
+| Placeholder                  | Value                                                                                                                |
+|------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `__DEVCONTAINER_NAME__`      | The name of the dev container (from the `name` property in `devcontainer.json`)                                      |
+| `__DEVCONTAINER_USER_NAME__` | The name of the user for dev container (from the `remoteuser` property in `devcontainer.json`, or `root` if not set) |
+| `__DEVCONTAINER_HOME__`      | The home folder for the dev container (e.g. `/home/vscode` or `/root`)                                               |
+
 ## Repository containers
 
 VS Code dev containers have another feature called "Repository containers". These are a set of dev container definitions that VS Code will automatically apply to a project based on its git repo.
 
 The default definitions are in the [microsoft/vscode-dev-containers](https://github.com/microsoft/vscode-dev-containers/tree/master/repository-containers) repo. If you look at the repo, you will see a `github.com` folder followed by paths for `<org>/<repo>`, e.g. `django/django`. The `https://github.com/django/django` repo doesn't contain a dev container definition, but VS Code will use the repository container definition from the `microsoft/vscode-dev-containers` repo.
 
-You can also configure VS Code to look for additional local paths for repository containers by providing a value for the VS Code `remote.containers.repository-container-paths` setting (see [this issue](https://github.com/microsoft/vscode-remote-release/issues/3218) for more details). 
-
+You can also configure VS Code to look for additional local paths for repository containers by providing a value for the VS Code `remote.containers.repository-container-paths` setting (see [this issue](https://github.com/microsoft/vscode-remote-release/issues/3218) for more details).

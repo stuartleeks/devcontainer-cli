@@ -12,7 +12,9 @@ import (
 func TestSetDevcontainerName(t *testing.T) {
 
 	f, err := ioutil.TempFile("", "test.json")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer os.Remove(f.Name())
 
 	_, _ = f.WriteString(`{
@@ -25,10 +27,14 @@ func TestSetDevcontainerName(t *testing.T) {
 }`)
 
 	err = SetDevcontainerName(f.Name(), "newName")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	buf, err := ioutil.ReadFile(f.Name())
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	assert.Equal(t, `{
 	"name": "newName",
@@ -43,7 +49,9 @@ func TestSetDevcontainerName(t *testing.T) {
 func TestGetDevContainerUserName_Uncommented(t *testing.T) {
 
 	f, err := ioutil.TempFile("", "test.json")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer os.Remove(f.Name())
 
 	_, _ = f.WriteString(`{
@@ -57,14 +65,18 @@ func TestGetDevContainerUserName_Uncommented(t *testing.T) {
 }`)
 
 	user, err := GetDevContainerUserName(f.Name())
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	assert.Equal(t, "vscode", user)
 }
 
 func TestGetDevContainerUserName_NotSet(t *testing.T) {
 
 	f, err := ioutil.TempFile("", "test.json")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer os.Remove(f.Name())
 
 	_, _ = f.WriteString(`{
@@ -77,14 +89,18 @@ func TestGetDevContainerUserName_NotSet(t *testing.T) {
 }`)
 
 	user, err := GetDevContainerUserName(f.Name())
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	assert.Equal(t, "", user)
 }
 
 func TestGetDevContainerUserName_Commented(t *testing.T) {
 
 	f, err := ioutil.TempFile("", "test.json")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer os.Remove(f.Name())
 
 	_, _ = f.WriteString(`{
@@ -98,14 +114,18 @@ func TestGetDevContainerUserName_Commented(t *testing.T) {
 }`)
 
 	user, err := GetDevContainerUserName(f.Name())
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	assert.Equal(t, "", user)
 }
 
 func TestSetDevcontainerName_SubstitutionValue(t *testing.T) {
 
 	f, err := ioutil.TempFile("", "test.json")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer os.Remove(f.Name())
 
 	_, _ = f.WriteString(`{
@@ -118,10 +138,14 @@ func TestSetDevcontainerName_SubstitutionValue(t *testing.T) {
 }`)
 
 	err = SetDevcontainerName(f.Name(), "newName")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	buf, err := ioutil.ReadFile(f.Name())
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	assert.Equal(t, `{
 	"name": "newName",
@@ -136,7 +160,9 @@ func TestSetDevcontainerName_SubstitutionValue(t *testing.T) {
 func TestGetTemplateFolders_ListsFoldersWithDevcontainers(t *testing.T) {
 
 	root, err := ioutil.TempDir("", "devcontainer*")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer os.RemoveAll(root)
 
 	folders := []string{root}
@@ -148,7 +174,9 @@ func TestGetTemplateFolders_ListsFoldersWithDevcontainers(t *testing.T) {
 	_ = ioutil.WriteFile(filepath.Join(root, "test2", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
 
 	templates, err := getTemplatesFromFolders(folders)
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	expectedTemplates := []DevcontainerTemplate{
 		{
@@ -166,10 +194,15 @@ func TestGetTemplateFolders_ListsFoldersWithDevcontainers(t *testing.T) {
 func TestGetTemplateFolders_TakesFolderInPrioirtyOrder(t *testing.T) {
 
 	root1, err := ioutil.TempDir("", "devcontainer*")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer os.RemoveAll(root1)
+
 	root2, err := ioutil.TempDir("", "devcontainer*")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer os.RemoveAll(root2)
 
 	folders := []string{root1, root2}
@@ -181,7 +214,9 @@ func TestGetTemplateFolders_TakesFolderInPrioirtyOrder(t *testing.T) {
 	_ = ioutil.WriteFile(filepath.Join(root2, "test1", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
 
 	templates, err := getTemplatesFromFolders(folders)
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	expectedTemplates := []DevcontainerTemplate{
 		{
@@ -195,10 +230,15 @@ func TestGetTemplateFolders_TakesFolderInPrioirtyOrder(t *testing.T) {
 func TestGetTemplateFolders_IgnoresFolderWithoutDevcontainer(t *testing.T) {
 
 	root1, err := ioutil.TempDir("", "devcontainer*")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer os.RemoveAll(root1)
+
 	root2, err := ioutil.TempDir("", "devcontainer*")
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 	defer os.RemoveAll(root2)
 
 	folders := []string{root1, root2}
@@ -210,7 +250,9 @@ func TestGetTemplateFolders_IgnoresFolderWithoutDevcontainer(t *testing.T) {
 	_ = ioutil.WriteFile(filepath.Join(root2, "test1", ".devcontainer", "devcontainer.json"), []byte{}, 0755)
 
 	templates, err := getTemplatesFromFolders(folders)
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		return
+	}
 
 	expectedTemplates := []DevcontainerTemplate{
 		{
@@ -220,4 +262,149 @@ func TestGetTemplateFolders_IgnoresFolderWithoutDevcontainer(t *testing.T) {
 	}
 
 	assert.ElementsMatch(t, expectedTemplates, templates)
+}
+
+func TestAddTemplate_PerformsSubstitutionWithUserName(t *testing.T) {
+
+	root, err := ioutil.TempDir("", "devcontainer*")
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer os.RemoveAll(root)
+
+	_ = os.MkdirAll(filepath.Join(root, "test1", ".devcontainer"), 0755)
+	_ = ioutil.WriteFile(filepath.Join(root, "test1", ".devcontainer", "devcontainer.json"), []byte(`{
+	"name": "expect this to be replaced",
+	"settings": {
+		"DC_NAME": "__DEVCONTAINER_NAME__",
+		"DC_USER_NAME": "__DEVCONTAINER_USER_NAME__",
+		"DC_HOME": "__DEVCONTAINER_HOME__"
+	},
+	"remoteUser": "dcuser"
+}`), 0755)
+	_ = ioutil.WriteFile(filepath.Join(root, "test1", ".devcontainer", "Dockerfile"), []byte(`FROM foo
+RUN echo hi
+
+ENV DC_NAME=__DEVCONTAINER_NAME__
+ENV DC_USER_NAME=__DEVCONTAINER_USER_NAME__
+ENV DC_HOME=__DEVCONTAINER_HOME__
+
+# __DEVCONTAINER_SNIPPET_INSERT__ 
+
+RUN echo hi2
+`), 0755)
+
+	// set up devcontainer
+	targetFolder := filepath.Join(root, "target")
+	_ = os.MkdirAll(targetFolder, 0755)
+
+	// Add template
+	err = CopyTemplateToFolder(filepath.Join(root, "test1", ".devcontainer"), targetFolder, "NewName")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	devcontainerFolder := filepath.Join(targetFolder, ".devcontainer")
+	buf, err := ioutil.ReadFile(filepath.Join(devcontainerFolder, "Dockerfile"))
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, `FROM foo
+RUN echo hi
+
+ENV DC_NAME=NewName
+ENV DC_USER_NAME=dcuser
+ENV DC_HOME=/home/dcuser
+
+# __DEVCONTAINER_SNIPPET_INSERT__ 
+
+RUN echo hi2
+`, string(buf))
+
+	buf, err = ioutil.ReadFile(filepath.Join(devcontainerFolder, "devcontainer.json"))
+	if !assert.NoError(t, err) {
+		return
+	}
+	stringContent := string(buf)
+	assert.Equal(t, `{
+	"name": "NewName",
+	"settings": {
+		"DC_NAME": "NewName",
+		"DC_USER_NAME": "dcuser",
+		"DC_HOME": "/home/dcuser"
+	},
+	"remoteUser": "dcuser"
+}`, stringContent)
+
+}
+func TestAddTemplate_PerformsSubstitutionWithoutUserName(t *testing.T) {
+
+	root, err := ioutil.TempDir("", "devcontainer*")
+	if !assert.NoError(t, err) {
+		return
+	}
+	defer os.RemoveAll(root)
+
+	_ = os.MkdirAll(filepath.Join(root, "test1", ".devcontainer"), 0755)
+	_ = ioutil.WriteFile(filepath.Join(root, "test1", ".devcontainer", "devcontainer.json"), []byte(`{
+	"name": "expect this to be replaced",
+	"settings": {
+		"DC_NAME": "__DEVCONTAINER_NAME__",
+		"DC_USER_NAME": "__DEVCONTAINER_USER_NAME__",
+		"DC_HOME": "__DEVCONTAINER_HOME__"
+	},
+}`), 0755)
+	_ = ioutil.WriteFile(filepath.Join(root, "test1", ".devcontainer", "Dockerfile"), []byte(`FROM foo
+RUN echo hi
+
+ENV DC_NAME=__DEVCONTAINER_NAME__
+ENV DC_USER_NAME=__DEVCONTAINER_USER_NAME__
+ENV DC_HOME=__DEVCONTAINER_HOME__
+
+# __DEVCONTAINER_SNIPPET_INSERT__ 
+
+RUN echo hi2
+`), 0755)
+
+	// set up devcontainer
+	targetFolder := filepath.Join(root, "target")
+	_ = os.MkdirAll(targetFolder, 0755)
+
+	// Add template
+	err = CopyTemplateToFolder(filepath.Join(root, "test1", ".devcontainer"), targetFolder, "NewName")
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	devcontainerFolder := filepath.Join(targetFolder, ".devcontainer")
+	buf, err := ioutil.ReadFile(filepath.Join(devcontainerFolder, "Dockerfile"))
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, `FROM foo
+RUN echo hi
+
+ENV DC_NAME=NewName
+ENV DC_USER_NAME=root
+ENV DC_HOME=/root
+
+# __DEVCONTAINER_SNIPPET_INSERT__ 
+
+RUN echo hi2
+`, string(buf))
+
+	buf, err = ioutil.ReadFile(filepath.Join(devcontainerFolder, "devcontainer.json"))
+	if !assert.NoError(t, err) {
+		return
+	}
+	stringContent := string(buf)
+	assert.Equal(t, `{
+	"name": "NewName",
+	"settings": {
+		"DC_NAME": "NewName",
+		"DC_USER_NAME": "root",
+		"DC_HOME": "/root"
+	},
+}`, stringContent)
+
 }
