@@ -154,3 +154,13 @@ For example:
     ]
 }
 ```
+
+### Placeholder Values
+
+After content has been merged/added to files when performing snippet actions, the following placeholder values are substituted:
+
+| Placeholder                  | Value                                                                                                                |
+|------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `__DEVCONTAINER_NAME__`      | The name of the dev container (from the `name` property in `devcontainer.json`)                                      |
+| `__DEVCONTAINER_USER_NAME__` | The name of the user for dev container (from the `remoteuser` property in `devcontainer.json`, or `root` if not set) |
+| `__DEVCONTAINER_HOME__`      | The home folder for the dev container (e.g. `/home/vscode` or `/root`)                                               |
