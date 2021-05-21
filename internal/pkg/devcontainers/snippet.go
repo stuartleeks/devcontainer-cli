@@ -20,6 +20,12 @@ import (
 	dora_parser "github.com/bradford-hamilton/dora/pkg/parser"
 )
 
+type SubstitutionValues struct {
+	Name       string
+	UserName   string
+	HomeFolder string
+}
+
 type DevcontainerSnippetType string
 
 const (
@@ -45,10 +51,11 @@ const (
 )
 
 type FolderSnippetAction struct {
-	Type       FolderSnippetActionType `json:"type"`
-	SourcePath string                  `json:"source"`  // for mergeJSON this is snippet-relative path to JSON. for copyAndRun this is the script filename
-	TargetPath string                  `json:"target"`  // for mergeJSON this is project-relative path to JSON
-	Content    string                  `json:"content"` // for dockerfileSnippet this is the content to include
+	Type        FolderSnippetActionType `json:"type"`
+	SourcePath  string                  `json:"source"`      // for mergeJSON this is snippet-relative path to JSON. for copyAndRun this is the script filename
+	TargetPath  string                  `json:"target"`      // for mergeJSON this is project-relative path to JSON
+	Content     string                  `json:"content"`     // for dockerfileSnippet this is the content to include
+	ContentPath string                  `json:"contentPath"` // for dockerfileSnippet this is the path to content to include
 }
 
 // FolderSnippet maps to the content of the snippet.json file for folder-based snippets
@@ -220,11 +227,23 @@ func addFolderSnippetToDevContainer(projectFolder string, snippet *DevcontainerS
 				return err
 			}
 		case FolderSnippetActionDockerfileSnippet:
-			if action.Content == "" {
-				return fmt.Errorf("content must be set for %s actions", action.Type)
+			var content string
+			if action.Content != "" {
+				if action.ContentPath != "" {
+					return fmt.Errorf("can only set one of content and contentPath")
+				}
+				content = action.Content + "\n"
+			} else if action.ContentPath != "" {
+				buf, err = ioutil.ReadFile(filepath.Join(snippet.Path, action.ContentPath))
+				if err != nil {
+					return err
+				}
+				content = string(buf)
+			} else {
+				return fmt.Errorf("one of content and contentPath must be set for %s actions", action.Type)
 			}
 			dockerfileFilename := filepath.Join(projectFolder, ".devcontainer", "Dockerfile")
-			err = insertDockerfileSnippet(projectFolder, dockerfileFilename, action.Content+"\n")
+			err = insertDockerfileSnippet(projectFolder, dockerfileFilename, content)
 			if err != nil {
 				return err
 			}
@@ -366,12 +385,6 @@ func loadJSONDocument(path string) (*dora_ast.RootNode, error) {
 		return nil, err
 	}
 	return &baseDocument, nil
-}
-
-type SubstitutionValues struct {
-	Name       string
-	UserName   string
-	HomeFolder string
 }
 
 func getSubstitutionValuesFromFile(devContainerJsonPath string) (*SubstitutionValues, error) {
