@@ -472,7 +472,7 @@ RUN echo hi2
 `, string(buf))
 }
 
-func TestFolderAddSnippet_InsertsSnippetsInDockerfile(t *testing.T) {
+func TestFolderAddSnippet_InsertsTextSnippetsInDockerfile(t *testing.T) {
 
 	root, _ := ioutil.TempDir("", "devcontainer*")
 	defer os.RemoveAll(root)
@@ -532,6 +532,77 @@ ENV FOO=BAR
 
 # testing
 ENV WIBBLE=BIBBLE
+
+# __DEVCONTAINER_SNIPPET_INSERT__ 
+
+RUN echo hi2
+`, string(buf))
+}
+
+func TestFolderAddSnippet_InsertsFileSnippetInDockerfile(t *testing.T) {
+
+	root, _ := ioutil.TempDir("", "devcontainer*")
+	defer os.RemoveAll(root)
+
+	// set up snippet
+	snippetFolder := filepath.Join(root, "snippets/test1")
+	_ = os.MkdirAll(snippetFolder, 0755)
+	snippetJSONFilename := filepath.Join(snippetFolder, "snippet.json")
+	_ = ioutil.WriteFile(snippetJSONFilename, []byte(`{
+		"actions": [
+			{
+				"type": "dockerfileSnippet",
+				"content": "ENV FOO=BAR"
+			},
+			{
+				"type": "dockerfileSnippet",
+				"contentPath": "Dockerfile"
+			}
+		]
+	}`), 0755)
+	snippetDockerfileFilename := filepath.Join(snippetFolder, "Dockerfile")
+	_ = ioutil.WriteFile(snippetDockerfileFilename, []byte(`# from snippet file
+ENV WIBBLE BIBBLE
+`), 0755)
+
+	// set up devcontainer
+	targetFolder := filepath.Join(root, "target")
+	devcontainerFolder := filepath.Join(targetFolder, ".devcontainer")
+	_ = os.MkdirAll(devcontainerFolder, 0755)
+
+	_ = ioutil.WriteFile(filepath.Join(devcontainerFolder, "Dockerfile"), []byte(`FROM foo
+RUN echo hi
+
+# __DEVCONTAINER_SNIPPET_INSERT__ 
+
+RUN echo hi2
+`), 0755)
+	_ = ioutil.WriteFile(filepath.Join(devcontainerFolder, "devcontainer.json"), []byte(`{
+	"name" : "testname"
+}`), 0755)
+
+	// Add snippet
+	snippet := DevcontainerSnippet{
+		Name: "test",
+		Path: snippetFolder,
+		Type: DevcontainerSnippetTypeFolder,
+	}
+	err := addSnippetToDevcontainer(targetFolder, &snippet)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	buf, err := ioutil.ReadFile(filepath.Join(devcontainerFolder, "Dockerfile"))
+	if !assert.NoError(t, err) {
+		return
+	}
+	assert.Equal(t, `FROM foo
+RUN echo hi
+
+ENV FOO=BAR
+
+# from snippet file
+ENV WIBBLE BIBBLE
 
 # __DEVCONTAINER_SNIPPET_INSERT__ 
 
