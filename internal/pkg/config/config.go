@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -11,23 +12,14 @@ import (
 
 var initialised bool = false
 
-// EnsureInitialised reads the config. Will quit if config is invalid
-func EnsureInitialised() {
+// ensureInitialised reads the config. Will quit if config is invalid
+func ensureInitialised() {
 	if !initialised {
-		viper.SetConfigName("devcontainer-cli")
-		viper.SetConfigType("json")
+		setupViper()
 
 		viper.AddConfigPath(getConfigPath())
-
-		viper.SetDefault("templatePaths", []string{})
-		viper.SetDefault("settingPaths", []string{})
-		viper.SetDefault("experimental", false)
-
-		// TODO - allow env var for config
 		if err := viper.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-				// Config file not found; ignore error if desired
-			} else {
+			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 				fmt.Printf("Error loading config file: %s\n", err)
 				os.Exit(1)
 			}
@@ -35,7 +27,31 @@ func EnsureInitialised() {
 		initialised = true
 	}
 }
+
+// Initialise provides a way to load config from a custom source
+func Initialise(configJSON string) error {
+	if initialised {
+		return fmt.Errorf("already initialised")
+	}
+	reader := strings.NewReader(configJSON)
+	setupViper()
+	if err := viper.ReadConfig(reader); err != nil {
+		return fmt.Errorf("error reading config: %s", err)
+	}
+	initialised = true
+	return nil
+}
+
+func setupViper() {
+	viper.SetConfigName("devcontainer-cli")
+	viper.SetConfigType("json")
+
+	viper.SetDefault("templatePaths", []string{})
+	viper.SetDefault("settingPaths", []string{})
+	viper.SetDefault("experimental", false)
+}
 func getConfigPath() string {
+	// TODO - allow env var for config
 	var path string
 	if os.Getenv("HOME") != "" {
 		path = filepath.Join("$HOME", ".devcontainer-cli/")
@@ -47,32 +63,32 @@ func getConfigPath() string {
 }
 
 func GetTemplateFolders() []string {
-	EnsureInitialised()
+	ensureInitialised()
 	return viper.GetStringSlice("templatePaths")
 }
 func GetSnippetFolders() []string {
-	EnsureInitialised()
+	ensureInitialised()
 	return viper.GetStringSlice("snippetPaths")
 }
 func GetExperimentalFeaturesEnabled() bool {
-	EnsureInitialised()
+	ensureInitialised()
 	return viper.GetBool("experimental")
 }
 func GetLastUpdateCheck() time.Time {
-	EnsureInitialised()
+	ensureInitialised()
 	return viper.GetTime("lastUpdateCheck")
 }
 func SetLastUpdateCheck(t time.Time) {
-	EnsureInitialised()
+	ensureInitialised()
 	viper.Set("lastUpdateCheck", t)
 }
 func GetAll() map[string]interface{} {
-	EnsureInitialised()
+	ensureInitialised()
 	return viper.AllSettings()
 }
 
 func SaveConfig() error {
-	EnsureInitialised()
+	ensureInitialised()
 	configPath := getConfigPath()
 	configPath = os.ExpandEnv(configPath)
 	if err := os.MkdirAll(configPath, 0755); err != nil {
