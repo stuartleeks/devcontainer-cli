@@ -8,8 +8,8 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
-	"github.com/stuartleeks/devcontainer-cli/internal/pkg/devcontainers"
 	ioutil2 "github.com/stuartleeks/devcontainer-cli/internal/pkg/ioutil"
+	"github.com/stuartleeks/devcontainer-cli/pkg/devcontainers"
 )
 
 func createTemplateCommand() *cobra.Command {

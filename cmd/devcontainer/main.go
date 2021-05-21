@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/update"
+	"github.com/stuartleeks/devcontainer-cli/pkg/config"
 )
 
 // Overridden via ldflags

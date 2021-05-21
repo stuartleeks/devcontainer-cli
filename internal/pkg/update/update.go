@@ -6,7 +6,7 @@ import (
 
 	"github.com/blang/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
-	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
+	"github.com/stuartleeks/devcontainer-cli/pkg/config"
 )
 
 func CheckForUpdate(currentVersion string) (*selfupdate.Release, error) {

@@ -5,8 +5,8 @@ import (
 	"os/exec"
 
 	"github.com/spf13/cobra"
-	"github.com/stuartleeks/devcontainer-cli/internal/pkg/devcontainers"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/wsl"
+	"github.com/stuartleeks/devcontainer-cli/pkg/devcontainers"
 )
 
 func createOpenInCodeCommand() *cobra.Command {

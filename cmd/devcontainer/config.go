@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
+	"github.com/stuartleeks/devcontainer-cli/pkg/config"
 )
 
 func createConfigCommand() *cobra.Command {

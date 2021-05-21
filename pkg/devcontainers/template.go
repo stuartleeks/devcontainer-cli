@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/errors"
 	ioutil2 "github.com/stuartleeks/devcontainer-cli/internal/pkg/ioutil"
+	"github.com/stuartleeks/devcontainer-cli/pkg/config"
 )
 
 // DevcontainerTemplate holds info on templates for list/add etc

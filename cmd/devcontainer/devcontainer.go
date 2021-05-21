@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
-	"github.com/stuartleeks/devcontainer-cli/internal/pkg/devcontainers"
+	"github.com/stuartleeks/devcontainer-cli/pkg/devcontainers"
 )
 
 func createListCommand() *cobra.Command {

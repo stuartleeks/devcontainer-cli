@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/errors"
 	ioutil2 "github.com/stuartleeks/devcontainer-cli/internal/pkg/ioutil"
+	"github.com/stuartleeks/devcontainer-cli/pkg/config"
 
 	dora_ast "github.com/bradford-hamilton/dora/pkg/ast"
 	"github.com/bradford-hamilton/dora/pkg/dora"
