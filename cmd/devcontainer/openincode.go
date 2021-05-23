@@ -33,10 +33,13 @@ func createOpenInCodeInsidersCommand() *cobra.Command {
 }
 
 func launchDevContainer(cmd *cobra.Command, appBase string, args []string) error {
-	if len(args) != 1 {
+	if len(args) > 1 {
 		return cmd.Usage()
 	}
-	path := args[0]
+	path := "." // default to current directory
+	if len(args) == 1 {
+		path = args[0]
+	}
 
 	launchURI, err := devcontainers.GetDevContainerURI(path)
 	if err != nil {
