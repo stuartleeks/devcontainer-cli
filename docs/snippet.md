@@ -36,7 +36,7 @@ Add a `snippetpaths` setting with an array value containing the path to your sni
 }
 ```
 
-NOTE: You also need to add the `experimental` setting with the value `true` as snippets are currently an experimental features
+NOTE: You also need to add the `experimental` setting with the value `true` as snippets are currently an experimental feature
 
 ## Listing snippets
 
