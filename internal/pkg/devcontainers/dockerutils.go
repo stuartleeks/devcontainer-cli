@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/terminal"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/wsl"
 )
 
@@ -126,6 +127,8 @@ func GetContainerIDForPath(devcontainerPath string) (string, error) {
 
 func ExecInDevContainer(containerIDOrName string, workDir string, args []string) error {
 
+	statusWriter := &terminal.UpdatingStatusWriter{}
+
 	containerID := ""
 	devcontainerList, err := ListDevcontainers()
 	if err != nil {
@@ -151,6 +154,7 @@ func ExecInDevContainer(containerIDOrName string, workDir string, args []string)
 		return err
 	}
 
+	statusWriter.Printf("Getting mount path")
 	if workDir == "" {
 		workDir, err = GetWorkspaceMountPath(localPath)
 		if err != nil {
@@ -160,18 +164,21 @@ func ExecInDevContainer(containerIDOrName string, workDir string, args []string)
 
 	wslPath := localPath
 	if strings.HasPrefix(wslPath, "\\\\wsl$") && wsl.IsWsl() {
+		statusWriter.Printf("Converting to WSL path")
 		wslPath, err = wsl.ConvertWindowsPathToWslPath(wslPath)
 		if err != nil {
 			return fmt.Errorf("error converting path: %s", err)
 		}
 	}
 
+	statusWriter.Printf("Getting user name")
 	devcontainerJSONPath := path.Join(wslPath, ".devcontainer/devcontainer.json")
 	userName, err := GetDevContainerUserName(devcontainerJSONPath)
 	if err != nil {
 		return err
 	}
 
+	statusWriter.Printf("Checking for SSH_AUTH_SOCK")
 	sshAuthSockValue, err := getSshAuthSockValue(containerID)
 	if err != nil {
 		// output error and continue without SSH_AUTH_SOCK value
@@ -180,9 +187,11 @@ func ExecInDevContainer(containerIDOrName string, workDir string, args []string)
 		fmt.Println("Continuing without setting SSH_AUTH_SOCK...")
 	}
 
+	statusWriter.Printf("Getting container PATH")
 	containerPath, err := getContainerEnvVar(containerID, "PATH")
 	if err == nil {
 		// Got the PATH
+		statusWriter.Printf("Getting code server path")
 		vscodeServerPath, err := getVscodeServerPath(containerID)
 		if err == nil {
 			// Got the VS Code server location - add bin subfolder to PATH
@@ -200,6 +209,7 @@ func ExecInDevContainer(containerIDOrName string, workDir string, args []string)
 		fmt.Println("Continuing without overriding PATH...")
 	}
 
+	statusWriter.Printf("Getting code IPC SOCK")
 	ipcSock, err := getVscodeIpcSock(containerID)
 	if err != nil {
 		ipcSock = ""
@@ -207,6 +217,7 @@ func ExecInDevContainer(containerIDOrName string, workDir string, args []string)
 		fmt.Println("Continuing without setting VSCODE_IPC_HOOK_CLI...")
 	}
 
+	statusWriter.Printf("Starting exec session\n") // newline to put container shell at start of line
 	dockerArgs := []string{"exec", "-it", "--workdir", workDir}
 	if userName != "" {
 		dockerArgs = append(dockerArgs, "--user", userName)
