@@ -132,6 +132,7 @@ func ExecInDevContainer(containerIDOrName string, workDir string, args []string)
 		return err
 	}
 
+	// Get container ID
 	for _, devcontainer := range devcontainerList {
 		if devcontainer.ContainerName == containerIDOrName ||
 			devcontainer.DevcontainerName == containerIDOrName ||
@@ -179,12 +180,45 @@ func ExecInDevContainer(containerIDOrName string, workDir string, args []string)
 		fmt.Println("Continuing without setting SSH_AUTH_SOCK...")
 	}
 
+	containerPath, err := getContainerEnvVar(containerID, "PATH")
+	if err == nil {
+		// Got the PATH
+		vscodeServerPath, err := getVscodeServerPath(containerID)
+		if err == nil {
+			// Got the VS Code server location - add bin subfolder to PATH
+			containerPath = strings.TrimSpace(containerPath)
+			containerPath = fmt.Sprintf("%s/bin:%s", vscodeServerPath, containerPath)
+		} else {
+			// output error and continue without adding to PATH value
+			fmt.Printf("Warning: Failed to get VS Code server location: %s\n", err)
+			fmt.Println("Continuing without adding VS Code Server to PATH...")
+		}
+	} else {
+		// output error and continue without adding to PATH value
+		containerPath = ""
+		fmt.Printf("Warning: Failed to get PATH value for container: %s\n", err)
+		fmt.Println("Continuing without overriding PATH...")
+	}
+
+	ipcSock, err := getVscodeIpcSock(containerID)
+	if err != nil {
+		ipcSock = ""
+		fmt.Printf("Warning; Failed to get VS Code IPC SOCK: %s\n", err)
+		fmt.Println("Continuing without setting VSCODE_IPC_HOOK_CLI...")
+	}
+
 	dockerArgs := []string{"exec", "-it", "--workdir", workDir}
 	if userName != "" {
 		dockerArgs = append(dockerArgs, "--user", userName)
 	}
 	if sshAuthSockValue != "" {
 		dockerArgs = append(dockerArgs, "--env", "SSH_AUTH_SOCK="+sshAuthSockValue)
+	}
+	if containerPath != "" {
+		dockerArgs = append(dockerArgs, "--env", "PATH="+containerPath)
+	}
+	if ipcSock != "" {
+		dockerArgs = append(dockerArgs, "--env", "VSCODE_IPC_HOOK_CLI="+ipcSock)
 	}
 	dockerArgs = append(dockerArgs, containerID)
 	dockerArgs = append(dockerArgs, args...)
@@ -219,8 +253,20 @@ func getSshAuthSockValue(containerID string) (string, error) {
 	// Host has SSH_AUTH_SOCK set, so expecting the dev container to have forwarding set up
 	// Find the latest /tmp/vscode-ssh-auth-<...>.sock
 
-	dockerArgs := []string{"exec", containerID, "bash", "-c", "ls -t -d -1 \"${TMPDIR:-/tmp}\"/vscode-ssh-auth-*"}
+	return getLatestFileMatch(containerID, "\"${TMPDIR:-/tmp}\"/vscode-ssh-auth-*")
+}
 
+func getVscodeServerPath(containerID string) (string, error) {
+	return getLatestFileMatch(containerID, "/vscode/vscode-server/bin/x64/*")
+}
+func getVscodeIpcSock(containerID string) (string, error) {
+	return getLatestFileMatch(containerID, "\"${TMPDIR:-/tmp}\"/vscode-ipc-*")
+}
+
+// getLatestFileMatch lists files matching `pattern` in the container and returns the latest filename
+func getLatestFileMatch(containerID string, pattern string) (string, error) {
+
+	dockerArgs := []string{"exec", containerID, "bash", "-c", fmt.Sprintf("ls -t -d -1 %s", pattern)}
 	dockerCmd := exec.Command("docker", dockerArgs...)
 	buf, err := dockerCmd.CombinedOutput()
 	if err != nil {
@@ -234,4 +280,18 @@ func getSshAuthSockValue(containerID string) (string, error) {
 		return "", nil
 	}
 	return strings.TrimSpace(lines[0]), nil
+}
+
+func getContainerEnvVar(containerID string, varName string) (string, error) {
+
+	// could inspect the docker container as an alternative approach
+	dockerArgs := []string{"exec", containerID, "bash", "-c", fmt.Sprintf("echo $%s", varName)}
+	dockerCmd := exec.Command("docker", dockerArgs...)
+	buf, err := dockerCmd.CombinedOutput()
+	if err != nil {
+		errMessage := string(buf)
+		return "", fmt.Errorf("Docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
+	}
+
+	return string(buf), nil
 }
