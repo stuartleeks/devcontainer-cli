@@ -111,10 +111,6 @@ func createExecCommand() *cobra.Command {
 			}
 			if argDevcontainerName != "" {
 				containerIDOrName := argDevcontainerName
-				devcontainerList, err := devcontainers.ListDevcontainers()
-				if err != nil {
-					return err
-				}
 
 				// Get container ID
 				for _, devcontainer := range devcontainerList {
