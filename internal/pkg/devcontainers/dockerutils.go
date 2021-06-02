@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/terminal"
@@ -68,10 +69,17 @@ func ListDevcontainers() ([]DevcontainerInfo, error) {
 				name = name[index+1:]
 			}
 		}
+		localPath := parts[listPartLocalFolder]
+		if strings.HasPrefix(localPath, "\\\\wsl$") && wsl.IsWsl() {
+			localPath, err = wsl.ConvertWindowsPathToWslPath(localPath)
+			if err != nil {
+				return []DevcontainerInfo{}, fmt.Errorf("error converting path: %s", err)
+			}
+		}
 		devcontainer := DevcontainerInfo{
 			ContainerID:      parts[listPartID],
 			ContainerName:    parts[listPartContainerName],
-			LocalFolderPath:  parts[listPartLocalFolder],
+			LocalFolderPath:  localPath,
 			DevcontainerName: name,
 		}
 		devcontainers = append(devcontainers, devcontainer)
@@ -129,37 +137,41 @@ func GetSourceMountFolderFromDevContainer(containerIDOrName string) (DockerMount
 	return mount, nil
 }
 
-// GetContainerIDForPath returns the ID of the running container that matches the path
-func GetContainerIDForPath(devcontainerPath string) (string, error) {
+type byLocalPathLength []DevcontainerInfo
+
+func (s byLocalPathLength) Len() int {
+	return len(s)
+}
+func (s byLocalPathLength) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s byLocalPathLength) Less(i, j int) bool {
+	return len(s[i].LocalFolderPath) < len(s[j].LocalFolderPath)
+}
+
+// GetClosestPathMatchForPath returns the dev container with the closes match to the specified path
+func GetClosestPathMatchForPath(devContainers []DevcontainerInfo, devcontainerPath string) (DevcontainerInfo, error) {
 	if devcontainerPath == "" {
 		devcontainerPath = "."
 	}
 	absPath, err := filepath.Abs(devcontainerPath)
 	if err != nil {
-		return "", fmt.Errorf("Error handling path %q: %s", devcontainerPath, err)
+		return DevcontainerInfo{}, fmt.Errorf("Error handling path %q: %s", devcontainerPath, err)
 	}
 
-	windowsPath := absPath
-	if wsl.IsWsl() {
-		var err error
-		windowsPath, err = wsl.ConvertWslPathToWindowsPath(windowsPath)
-		if err != nil {
-			return "", err
+	matchingPaths := byLocalPathLength{}
+	for _, devcontainer := range devContainers {
+		// Treat as match if the specified path is within the devcontainer path
+		if strings.HasPrefix(absPath, devcontainer.LocalFolderPath) {
+			matchingPaths = append(matchingPaths, devcontainer)
 		}
 	}
-
-	devcontainerList, err := ListDevcontainers()
-	if err != nil {
-		return "", fmt.Errorf("Error getting container list: %s", err)
+	if len(matchingPaths) == 0 {
+		return DevcontainerInfo{}, fmt.Errorf("Could not find running container for path %q", devcontainerPath)
 	}
-
-	for _, devcontainer := range devcontainerList {
-		if devcontainer.LocalFolderPath == windowsPath {
-			containerID := devcontainer.ContainerID
-			return containerID, nil
-		}
-	}
-	return "", fmt.Errorf("Could not find running container for path %q", devcontainerPath)
+	// return longest prefix match
+	sort.Sort(matchingPaths)
+	return matchingPaths[len(matchingPaths)-1], nil
 }
 
 func ExecInDevContainer(containerID string, workDir string, args []string) error {

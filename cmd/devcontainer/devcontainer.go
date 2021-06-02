@@ -142,10 +142,11 @@ func createExecCommand() *cobra.Command {
 				// TODO - update to check for devcontainers in the path ancestry
 				// Can't just check up the path for a .devcontainer folder as the container might
 				// have been created via repository containers (https://github.com/microsoft/vscode-dev-containers/tree/main/repository-containers)
-				containerID, err = devcontainers.GetContainerIDForPath(devcontainerPath)
+				devcontainer, err := devcontainers.GetClosestPathMatchForPath(devcontainerList, devcontainerPath)
 				if err != nil {
 					return err
 				}
+				containerID = devcontainer.ContainerID
 				if workDir == "" {
 					if devcontainerPath == "" {
 						workDir = "."
