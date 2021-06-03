@@ -98,13 +98,33 @@ func createExecCommand() *cobra.Command {
 				return cmd.Usage()
 			}
 
-			containerIDOrName := ""
+			// workDir default:
+			// - devcontainer mount path if name or prompt specified (ExecInDevContainer defaults to this if workDir is "")
+			// - path if path set
+			// - current directory if path == "" and neither name or prompt set
+			workDir := argWorkDir
+
+			containerID := ""
 			devcontainerList, err := devcontainers.ListDevcontainers()
 			if err != nil {
 				return err
 			}
 			if argDevcontainerName != "" {
-				containerIDOrName = argDevcontainerName
+				containerIDOrName := argDevcontainerName
+
+				// Get container ID
+				for _, devcontainer := range devcontainerList {
+					if devcontainer.ContainerName == containerIDOrName ||
+						devcontainer.DevcontainerName == containerIDOrName ||
+						devcontainer.ContainerID == containerIDOrName {
+						containerID = devcontainer.ContainerID
+						break
+					}
+				}
+
+				if containerID == "" {
+					return fmt.Errorf("Failed to find a matching (running) dev container for %q", containerIDOrName)
+				}
 			} else if argPromptForDevcontainer {
 				// prompt user
 				fmt.Println("Specify the devcontainer to use:")
@@ -116,16 +136,27 @@ func createExecCommand() *cobra.Command {
 				if selection < 0 || selection >= len(devcontainerList) {
 					return fmt.Errorf("Invalid option")
 				}
-				containerIDOrName = devcontainerList[selection].ContainerID
+				containerID = devcontainerList[selection].ContainerID
 			} else {
 				devcontainerPath := argDevcontainerPath
-				containerIDOrName, err = devcontainers.GetContainerIDForPath(devcontainerPath)
+				// TODO - update to check for devcontainers in the path ancestry
+				// Can't just check up the path for a .devcontainer folder as the container might
+				// have been created via repository containers (https://github.com/microsoft/vscode-dev-containers/tree/main/repository-containers)
+				devcontainer, err := devcontainers.GetClosestPathMatchForPath(devcontainerList, devcontainerPath)
 				if err != nil {
 					return err
 				}
+				containerID = devcontainer.ContainerID
+				if workDir == "" {
+					if devcontainerPath == "" {
+						workDir = "."
+					} else {
+						workDir = devcontainerPath
+					}
+				}
 			}
 
-			return devcontainers.ExecInDevContainer(containerIDOrName, argWorkDir, args)
+			return devcontainers.ExecInDevContainer(containerID, workDir, args)
 		},
 		Args:                  cobra.ArbitraryArgs,
 		DisableFlagsInUseLine: true,

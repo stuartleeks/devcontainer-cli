@@ -3,11 +3,13 @@ package devcontainers
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/terminal"
@@ -67,10 +69,17 @@ func ListDevcontainers() ([]DevcontainerInfo, error) {
 				name = name[index+1:]
 			}
 		}
+		localPath := parts[listPartLocalFolder]
+		if strings.HasPrefix(localPath, "\\\\wsl$") && wsl.IsWsl() {
+			localPath, err = wsl.ConvertWindowsPathToWslPath(localPath)
+			if err != nil {
+				return []DevcontainerInfo{}, fmt.Errorf("error converting path: %s", err)
+			}
+		}
 		devcontainer := DevcontainerInfo{
 			ContainerID:      parts[listPartID],
 			ContainerName:    parts[listPartContainerName],
-			LocalFolderPath:  parts[listPartLocalFolder],
+			LocalFolderPath:  localPath,
 			DevcontainerName: name,
 		}
 		devcontainers = append(devcontainers, devcontainer)
@@ -92,87 +101,91 @@ func GetLocalFolderFromDevContainer(containerIDOrName string) (string, error) {
 	return strings.TrimSpace(string(output)), nil
 }
 
-// GetContainerIDForPath returns the ID of the running container that matches the path
-func GetContainerIDForPath(devcontainerPath string) (string, error) {
+// DockerMount represents mount info from Docker output
+type DockerMount struct {
+	Source      string `json:"Source"`
+	Destination string `json:"Destination"`
+}
+
+// GetSourceMountFolderFromDevContainer inspects the specified container and returns the DockerMount for the source mount
+func GetSourceMountFolderFromDevContainer(containerIDOrName string) (DockerMount, error) {
+	localPath, err := GetLocalFolderFromDevContainer(containerIDOrName)
+	if err != nil {
+		return DockerMount{}, err
+	}
+
+	if strings.HasPrefix(localPath, "\\\\wsl$") && wsl.IsWsl() {
+		localPath, err = wsl.ConvertWindowsPathToWslPath(localPath)
+		if err != nil {
+			return DockerMount{}, fmt.Errorf("error converting path: %s", err)
+		}
+	}
+
+	cmd := exec.Command("docker", "inspect", containerIDOrName, "--format", fmt.Sprintf("{{ range .Mounts }}{{if eq .Source \"%s\"}}{{json .}}{{end}}{{end}}", localPath))
+
+	output, err := cmd.Output()
+	if err != nil {
+		return DockerMount{}, fmt.Errorf("Failed to read docker stdout: %v", err)
+	}
+
+	var mount DockerMount
+	err = json.Unmarshal(output, &mount)
+	if err != nil {
+		return DockerMount{}, err
+	}
+
+	return mount, nil
+}
+
+type byLocalPathLength []DevcontainerInfo
+
+func (s byLocalPathLength) Len() int {
+	return len(s)
+}
+func (s byLocalPathLength) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+func (s byLocalPathLength) Less(i, j int) bool {
+	return len(s[i].LocalFolderPath) < len(s[j].LocalFolderPath)
+}
+
+// GetClosestPathMatchForPath returns the dev container with the closes match to the specified path
+func GetClosestPathMatchForPath(devContainers []DevcontainerInfo, devcontainerPath string) (DevcontainerInfo, error) {
 	if devcontainerPath == "" {
 		devcontainerPath = "."
 	}
 	absPath, err := filepath.Abs(devcontainerPath)
 	if err != nil {
-		return "", fmt.Errorf("Error handling path %q: %s", devcontainerPath, err)
+		return DevcontainerInfo{}, fmt.Errorf("Error handling path %q: %s", devcontainerPath, err)
 	}
 
-	windowsPath := absPath
-	if wsl.IsWsl() {
-		var err error
-		windowsPath, err = wsl.ConvertWslPathToWindowsPath(windowsPath)
-		if err != nil {
-			return "", err
+	matchingPaths := byLocalPathLength{}
+	for _, devcontainer := range devContainers {
+		// Treat as match if the specified path is within the devcontainer path
+		if strings.HasPrefix(absPath, devcontainer.LocalFolderPath) {
+			matchingPaths = append(matchingPaths, devcontainer)
 		}
 	}
-
-	devcontainerList, err := ListDevcontainers()
-	if err != nil {
-		return "", fmt.Errorf("Error getting container list: %s", err)
+	if len(matchingPaths) == 0 {
+		return DevcontainerInfo{}, fmt.Errorf("Could not find running container for path %q", devcontainerPath)
 	}
-
-	for _, devcontainer := range devcontainerList {
-		if devcontainer.LocalFolderPath == windowsPath {
-			containerID := devcontainer.ContainerID
-			return containerID, nil
-		}
-	}
-	return "", fmt.Errorf("Could not find running container for path %q", devcontainerPath)
+	// return longest prefix match
+	sort.Sort(matchingPaths)
+	return matchingPaths[len(matchingPaths)-1], nil
 }
 
-func ExecInDevContainer(containerIDOrName string, workDir string, args []string) error {
+func ExecInDevContainer(containerID string, workDir string, args []string) error {
 
 	statusWriter := &terminal.UpdatingStatusWriter{}
 
-	containerID := ""
-	devcontainerList, err := ListDevcontainers()
+	sourceMount, err := GetSourceMountFolderFromDevContainer(containerID)
 	if err != nil {
 		return err
 	}
-
-	// Get container ID
-	for _, devcontainer := range devcontainerList {
-		if devcontainer.ContainerName == containerIDOrName ||
-			devcontainer.DevcontainerName == containerIDOrName ||
-			devcontainer.ContainerID == containerIDOrName {
-			containerID = devcontainer.ContainerID
-			break
-		}
-	}
-
-	if containerID == "" {
-		return fmt.Errorf("Failed to find a matching (running) dev container for %q", containerIDOrName)
-	}
-
-	localPath, err := GetLocalFolderFromDevContainer(containerID)
-	if err != nil {
-		return err
-	}
-
-	statusWriter.Printf("Getting mount path")
-	if workDir == "" {
-		workDir, err = GetWorkspaceMountPath(localPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	wslPath := localPath
-	if strings.HasPrefix(wslPath, "\\\\wsl$") && wsl.IsWsl() {
-		statusWriter.Printf("Converting to WSL path")
-		wslPath, err = wsl.ConvertWindowsPathToWslPath(wslPath)
-		if err != nil {
-			return fmt.Errorf("error converting path: %s", err)
-		}
-	}
+	localPath := sourceMount.Source
 
 	statusWriter.Printf("Getting user name")
-	devcontainerJSONPath := path.Join(wslPath, ".devcontainer/devcontainer.json")
+	devcontainerJSONPath := path.Join(localPath, ".devcontainer/devcontainer.json")
 	userName, err := GetDevContainerUserName(devcontainerJSONPath)
 	if err != nil {
 		return err
@@ -215,6 +228,35 @@ func ExecInDevContainer(containerIDOrName string, workDir string, args []string)
 		ipcSock = ""
 		fmt.Printf("Warning; Failed to get VS Code IPC SOCK: %s\n", err)
 		fmt.Println("Continuing without setting VSCODE_IPC_HOOK_CLI...")
+	}
+
+	mountPath := sourceMount.Destination
+	if workDir == "" {
+		workDir = mountPath
+	} else if !filepath.IsAbs(workDir) {
+
+		// Convert to absolute (local) path
+		// This takes into account current directory (potentially within the dev container path)
+		// We'll convert local to container path below
+		workDir, err = filepath.Abs(workDir)
+		if err != nil {
+			return err
+		}
+	}
+
+	statusWriter.Printf("Test container path")
+	containerPathExists, err := testContainerPathExists(containerID, workDir)
+	if err != nil {
+		return fmt.Errorf("error checking container path: %s", err)
+	}
+	if !containerPathExists {
+		// path not found - try converting from local path
+		// ? Should we check here that the workDir has localPath as a prefix?
+		devContainerRelativePath, err := filepath.Rel(localPath, workDir)
+		if err != nil {
+			return fmt.Errorf("error getting path relative to mount dir: %s", err)
+		}
+		workDir = filepath.Join(mountPath, devContainerRelativePath)
 	}
 
 	statusWriter.Printf("Starting exec session\n") // newline to put container shell at start of line
@@ -305,4 +347,17 @@ func getContainerEnvVar(containerID string, varName string) (string, error) {
 	}
 
 	return string(buf), nil
+}
+
+func testContainerPathExists(containerID string, path string) (bool, error) {
+	dockerArgs := []string{"exec", containerID, "bash", "-c", fmt.Sprintf("[[ -d %s ]]; echo $?", path)}
+	dockerCmd := exec.Command("docker", dockerArgs...)
+	buf, err := dockerCmd.CombinedOutput()
+	if err != nil {
+		errMessage := string(buf)
+		return false, fmt.Errorf("Docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
+	}
+
+	response := strings.TrimSpace(string(buf))
+	return response == "0", nil
 }
