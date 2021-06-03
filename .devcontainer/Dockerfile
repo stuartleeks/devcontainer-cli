@@ -63,3 +63,10 @@ RUN \
 
 # Switch back to dialog for any ad-hoc use of apt-get
 ENV DEBIAN_FRONTEND=dialog
+
+# gh
+COPY scripts/gh.sh /tmp/
+RUN /tmp/gh.sh
+
+# symlink gh config folder
+RUN echo 'if [[ ! -d /home/vscode/.config/gh ]]; then mkdir -p /home/vscode/.config; ln -s /config/gh /home/vscode/.config/gh; fi ' >> ~/.bashrc
