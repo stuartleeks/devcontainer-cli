@@ -13,4 +13,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
-replace github.com/bradford-hamilton/dora v0.1.1 => github.com/stuartleeks/dora v0.1.4
+replace github.com/bradford-hamilton/dora v0.1.1 => github.com/stuartleeks/dora v0.1.5
