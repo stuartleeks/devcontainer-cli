@@ -14,14 +14,8 @@
 
 		// Mount go mod cache
 		"-v", "devcontainer-cli-gomodcache:/go/pkg",
-		// Keep command history 
-		"-v", "devcontainer-cli-bashhistory:/root/commandhistory",
-		// Mount docker socket for docker builds
-		"-v", "/var/run/docker.sock:/var/run/docker.sock",
 		// Use host network
 		"--network=host",
-		// Mount azure, git and docker config
-		"-v", "${env:HOME}${env:USERPROFILE}/.azure:/root/.azure"
 	],
 
 	// Set *default* container specific settings.json values on container create.
@@ -63,9 +57,15 @@
 	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "vscode",
 	"mounts": [
+		// Keep command history
+		"source=devcontainer-cli-bashhistory,target=/home/vscode/commandhistory",
 		// Mounts the .config/gh host folder into the dev container to pick up host gh CLI login details
 		// NOTE that mounting directly to ~/.config/gh makes ~/.config only root-writable
 		// Instead monut to another location and symlink in Dockerfile
 		"type=bind,source=${env:HOME}${env:USERPROFILE}/.config/gh,target=/config/gh",
+		// Mounts the .azure host folder into the dev container to pick up host az CLI login details
+		"type=bind,source=${env:HOME}${env:USERPROFILE}/.azure,target=/home/vscode/.azure",
+		// Mount host docker socket
+		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
 	],
 }

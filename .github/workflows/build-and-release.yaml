@@ -30,7 +30,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and run CLI
-      uses: stuartleeks/devcontainer-build-run@v0.1-alpha
+      uses: stuartleeks/devcontainer-build-run@sl/env-var-substitution
       env:
         GITHUB_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
         BUILD_NUMBER: ${{ github.run_id }}
@@ -38,7 +38,9 @@ jobs:
         BRANCH: ${{ github.ref }}
       with:
         imageName: ghcr.io/stuartleeks/devcontainer-cli-devcontainer
-        runCmd: make devcontainer-release
+        runCmd: |
+          sudo chown -R $(whoami) /go/pkg
+          ./scripts/ci_release.sh
         env: |
           GITHUB_TOKEN
           BUILD_NUMBER
