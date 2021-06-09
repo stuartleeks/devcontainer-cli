@@ -19,17 +19,31 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: CI Tooling
-      run: sudo apt update && sudo apt install build-essential -y
-    
-    - name: Build devcontainer for tooling
-      run: sudo -E make devcontainer
+    - name: Set up Docker BuildKit
+      uses: docker/setup-buildx-action@v1
 
-    - name: Run the release
-      run: sudo -E make devcontainer-release
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v1 
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and run CLI
+      uses: stuartleeks/devcontainer-build-run@v0.1-alpha
       env:
         GITHUB_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
         BUILD_NUMBER: ${{ github.run_id }}
-        IS_CI: 1
         IS_PR: ${{ github.head_ref }}
         BRANCH: ${{ github.ref }}
+      with:
+        imageName: ghcr.io/stuartleeks/devcontainer-cli-devcontainer
+        runCmd: |
+          sudo chown -R $(whoami) /go/pkg
+          ./scripts/ci_release.sh
+        env: |
+          GITHUB_TOKEN
+          BUILD_NUMBER
+          IS_CI=1
+          IS_PR
+          BRANCH
