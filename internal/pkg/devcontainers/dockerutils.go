@@ -107,34 +107,71 @@ type DockerMount struct {
 	Destination string `json:"Destination"`
 }
 
-// GetSourceMountFolderFromDevContainer inspects the specified container and returns the DockerMount for the source mount
-func GetSourceMountFolderFromDevContainer(containerIDOrName string) (DockerMount, error) {
+// SourceInfo holds properties about the source mounted in a dev container
+type SourceInfo struct {
+	DevcontainerFolder string
+	DockerMount        DockerMount
+}
+
+// getMountFolderFromFolder walks up the path hierarchy checking for a git repo. If found that is returned, if not the original folder is used
+func getMountFolderFromFolder(folder string) (string, error) {
+
+	for currentFolder := folder; currentFolder != ""; currentFolder = path.Dir(currentFolder) {
+		info, err := os.Stat(path.Join(currentFolder, ".git"))
+		if os.IsNotExist(err) {
+			continue // walk up the hierarchy
+		}
+		if err != nil {
+			// other error - e.g. permissions issue
+			// give up the search
+			break
+		}
+		if info.IsDir() {
+			// We've found a .git folder - use it
+			return currentFolder, nil
+		}
+
+	}
+	// didn't find anything - use original folder
+	return folder, nil
+}
+
+// GetSourceInfoFromDevContainer inspects the specified container and returns the SourceInfo
+func GetSourceInfoFromDevContainer(containerIDOrName string) (SourceInfo, error) {
 	localPath, err := GetLocalFolderFromDevContainer(containerIDOrName)
 	if err != nil {
-		return DockerMount{}, err
+		return SourceInfo{}, err
 	}
 
 	if strings.HasPrefix(localPath, "\\\\wsl$") && wsl.IsWsl() {
 		localPath, err = wsl.ConvertWindowsPathToWslPath(localPath)
 		if err != nil {
-			return DockerMount{}, fmt.Errorf("error converting path: %s", err)
+			return SourceInfo{}, fmt.Errorf("error converting path: %s", err)
 		}
 	}
 
-	cmd := exec.Command("docker", "inspect", containerIDOrName, "--format", fmt.Sprintf("{{ range .Mounts }}{{if eq .Source \"%s\"}}{{json .}}{{end}}{{end}}", localPath))
+	mountFolder, err := getMountFolderFromFolder(localPath)
+	if err != nil {
+		return SourceInfo{}, fmt.Errorf("search for mount folder failed: %s", err)
+	}
+
+	cmd := exec.Command("docker", "inspect", containerIDOrName, "--format", fmt.Sprintf("{{ range .Mounts }}{{if eq .Source \"%s\"}}{{json .}}{{end}}{{end}}", mountFolder))
 
 	output, err := cmd.Output()
 	if err != nil {
-		return DockerMount{}, fmt.Errorf("Failed to read docker stdout: %v", err)
+		return SourceInfo{}, fmt.Errorf("Failed to read docker stdout: %v", err)
 	}
 
 	var mount DockerMount
 	err = json.Unmarshal(output, &mount)
 	if err != nil {
-		return DockerMount{}, err
+		return SourceInfo{}, fmt.Errorf("failed to get parse JSON getting mount folder for container %q (path=%q): %s", containerIDOrName, mountFolder, err)
 	}
 
-	return mount, nil
+	return SourceInfo{
+		DevcontainerFolder: localPath,
+		DockerMount:        mount,
+	}, nil
 }
 
 type byLocalPathLength []DevcontainerInfo
@@ -178,11 +215,11 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 
 	statusWriter := &terminal.UpdatingStatusWriter{}
 
-	sourceMount, err := GetSourceMountFolderFromDevContainer(containerID)
+	sourceInfo, err := GetSourceInfoFromDevContainer(containerID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get source mount: %s", err)
 	}
-	localPath := sourceMount.Source
+	localPath := sourceInfo.DevcontainerFolder
 
 	statusWriter.Printf("Getting user name")
 	devcontainerJSONPath := path.Join(localPath, ".devcontainer/devcontainer.json")
@@ -230,9 +267,9 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 		fmt.Println("Continuing without setting VSCODE_IPC_HOOK_CLI...")
 	}
 
-	mountPath := sourceMount.Destination
+	mountPath := sourceInfo.DockerMount.Destination
 	if workDir == "" {
-		workDir = mountPath
+		workDir = sourceInfo.DevcontainerFolder
 	} else if !filepath.IsAbs(workDir) {
 
 		// Convert to absolute (local) path
@@ -251,8 +288,8 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 	}
 	if !containerPathExists {
 		// path not found - try converting from local path
-		// ? Should we check here that the workDir has localPath as a prefix?
-		devContainerRelativePath, err := filepath.Rel(localPath, workDir)
+		// ? Should we check here that the workDir has mountPath as a prefix?
+		devContainerRelativePath, err := filepath.Rel(sourceInfo.DockerMount.Source, workDir)
 		if err != nil {
 			return fmt.Errorf("error getting path relative to mount dir: %s", err)
 		}
