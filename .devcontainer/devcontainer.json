@@ -3,6 +3,9 @@
 {
 	"name": "devcontainer-cli",
 	"dockerFile": "Dockerfile",
+	"build": {
+		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-cli-devcontainer"
+	},
 	"runArgs": [
 		// Uncomment the next line to use a non-root user. On Linux, this will prevent
 		// new files getting created as root, but you may need to update the USER_UID
