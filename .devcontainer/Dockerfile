@@ -45,17 +45,21 @@ ENV DEVCONTAINER=true
 ENV GO111MODULE=on
 
 # Install Go tools
+ARG GO_PLS_VERSION=0.7.2
+ARG DLV_VERSION=1.7.2
+ARG GO_RELEASER_VERSION=0.180.3
+ARG GOLANGCI_LINT_VERSION=1.42.1
 RUN \
     # --> Delve for debugging
-    go get github.com/go-delve/delve/cmd/dlv@v1.6.0 \
+    go get github.com/go-delve/delve/cmd/dlv@v${DLV_VERSION}\
     # --> Go language server
-    && go get golang.org/x/tools/gopls@v0.6.10 \
+    && go get golang.org/x/tools/gopls@v${GO_PLS_VERSION} \
     # --> Go symbols and outline for go to symbol support and test support 
     && go get github.com/acroca/go-symbols@v0.1.1 && go get github.com/ramya-rao-a/go-outline@7182a932836a71948db4a81991a494751eccfe77 \
     # --> GolangCI-lint
-    && curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sed 's/tar -/tar --no-same-owner -/g' | sh -s -- -b $(go env GOPATH)/bin \
+    && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v${GOLANGCI_LINT_VERSION} \
     # --> Go releaser 
-    && curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh -s -- "v0.164.0" \
+    && curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh -s -- v${GO_RELEASER_VERSION} \
     # --> Install junit converter
     && go get github.com/jstemmer/go-junit-report@v0.9.1 \
     && sudo rm -rf /go/src/ \

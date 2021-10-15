@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/git"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/wsl"
@@ -49,7 +48,7 @@ func GetWorkspaceMountPath(folderPath string) (string, error) {
 
 	// If we're called from WSL we want a WSL Path but will also handle a Windows Path
 	if wsl.IsWsl() {
-		if strings.HasPrefix(folderPath, "\\\\wsl$\\") {
+		if wsl.HasWslPathPrefix(folderPath) {
 			convertedPath, err := wsl.ConvertWindowsPathToWslPath(folderPath)
 			if err != nil {
 				return "", err

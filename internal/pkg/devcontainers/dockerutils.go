@@ -70,7 +70,7 @@ func ListDevcontainers() ([]DevcontainerInfo, error) {
 			}
 		}
 		localPath := parts[listPartLocalFolder]
-		if strings.HasPrefix(localPath, "\\\\wsl$") && wsl.IsWsl() {
+		if wsl.HasWslPathPrefix(localPath) && wsl.IsWsl() {
 			localPath, err = wsl.ConvertWindowsPathToWslPath(localPath)
 			if err != nil {
 				return []DevcontainerInfo{}, fmt.Errorf("error converting path: %s", err)
@@ -143,7 +143,7 @@ func GetSourceInfoFromDevContainer(containerIDOrName string) (SourceInfo, error)
 		return SourceInfo{}, err
 	}
 
-	if strings.HasPrefix(localPath, "\\\\wsl$") && wsl.IsWsl() {
+	if wsl.HasWslPathPrefix(localPath) && wsl.IsWsl() {
 		localPath, err = wsl.ConvertWindowsPathToWslPath(localPath)
 		if err != nil {
 			return SourceInfo{}, fmt.Errorf("error converting path: %s", err)
@@ -165,7 +165,7 @@ func GetSourceInfoFromDevContainer(containerIDOrName string) (SourceInfo, error)
 	var mount DockerMount
 	err = json.Unmarshal(output, &mount)
 	if err != nil {
-		return SourceInfo{}, fmt.Errorf("failed to get parse JSON getting mount folder for container %q (path=%q): %s", containerIDOrName, mountFolder, err)
+		return SourceInfo{}, fmt.Errorf("failed to parse JSON getting mount folder for container %q (path=%q): %s", containerIDOrName, mountFolder, err)
 	}
 
 	return SourceInfo{
@@ -199,13 +199,22 @@ func GetClosestPathMatchForPath(devContainers []DevcontainerInfo, devcontainerPa
 	matchingPaths := byLocalPathLength{}
 	for _, devcontainer := range devContainers {
 		// Treat as match if the specified path is within the devcontainer path
-		if strings.HasPrefix(absPath, devcontainer.LocalFolderPath) {
+		testPath := devcontainer.LocalFolderPath
+		if wsl.IsWsl() && wsl.HasWslPathPrefix(testPath) {
+			testPath, err = wsl.ConvertWindowsPathToWslPath(testPath)
+			fmt.Println("Converted to..")
+			if err != nil {
+				return DevcontainerInfo{}, fmt.Errorf("Error converting path from dev container list (%q): %s", testPath, err)
+			}
+		}
+		if strings.HasPrefix(absPath, testPath) {
 			matchingPaths = append(matchingPaths, devcontainer)
 		}
 	}
 	if len(matchingPaths) == 0 {
 		return DevcontainerInfo{}, fmt.Errorf("Could not find running container for path %q", devcontainerPath)
 	}
+
 	// return longest prefix match
 	sort.Sort(matchingPaths)
 	return matchingPaths[len(matchingPaths)-1], nil
