@@ -34,3 +34,7 @@ func ConvertWindowsPathToWslPath(path string) (string, error) {
 	}
 	return strings.TrimSpace(string(buf)), nil
 }
+
+func HasWslPathPrefix(path string) bool {
+	return strings.HasPrefix(path, "\\\\wsl$\\") || strings.HasPrefix(path, "\\\\wsl.localhost\\")
+}
