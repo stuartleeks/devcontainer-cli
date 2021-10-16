@@ -4,7 +4,13 @@
 	"name": "devcontainer-cli",
 	"dockerFile": "Dockerfile",
 	"build": {
-		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-cli-devcontainer"
+		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-cli-devcontainer",
+		"args": {
+			// To ensure that the group ID for the docker group in the container
+			// matches the group ID on the host, add this to your .bash_profile on the host
+			// 		export DOCKER_GROUP_ID=$(getent group docker | awk -F ":" '{ print $3 }')
+			"DOCKER_GROUP_ID": "${localEnv:DOCKER_GROUP_ID}"
+		}
 	},
 	"runArgs": [
 		// Uncomment the next line to use a non-root user. On Linux, this will prevent
@@ -49,7 +55,8 @@
 		"darkriszty.markdown-table-prettify",
         "davidanson.vscode-markdownlint",
         "mushan.vscode-paste-image"
-	],
+	,
+		"ms-azuretools.vscode-docker",],
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
@@ -69,6 +76,6 @@
 		// Mounts the .azure host folder into the dev container to pick up host az CLI login details
 		"type=bind,source=${env:HOME}${env:USERPROFILE}/.azure,target=/home/vscode/.azure",
 		// Mount host docker socket
-		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
+		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",	
 	],
 }
