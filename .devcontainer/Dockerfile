@@ -3,7 +3,7 @@
 # Licensed under the MIT License. See https://go.microsoft.com/fwlink/?linkid=2090316 for license information.
 #-------------------------------------------------------------------------------------------------------------
 
-FROM golang:1.14-stretch
+FROM golang:1.15-stretch
 
 # Avoid warnings by switching to noninteractive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -37,6 +37,8 @@ RUN groupadd --gid $USER_GID $USERNAME \
 
 # Set default user
 USER $USERNAME
+RUN mkdir -p ~/.local/bin
+ENV PATH /home/${USERNAME}/.local/bin:$PATH
 
 # Set env for tracking that we're running in a devcontainer
 ENV DEVCONTAINER=true
@@ -74,3 +76,9 @@ RUN /tmp/gh.sh
 
 # symlink gh config folder
 RUN echo 'if [[ ! -d /home/vscode/.config/gh ]]; then mkdir -p /home/vscode/.config; ln -s /config/gh /home/vscode/.config/gh; fi ' >> ~/.bashrc
+
+ARG DOCKER_GROUP_ID
+
+# docker-from-docker
+COPY scripts/docker-client.sh /tmp/
+RUN /tmp/docker-client.sh
