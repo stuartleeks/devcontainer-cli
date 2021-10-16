@@ -59,6 +59,17 @@ func ListDevcontainers() ([]DevcontainerInfo, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := strings.Split(line, "|")
+		localPath := parts[listPartLocalFolder]
+		if localPath == "" {
+			// not a dev container
+			continue
+		}
+		if wsl.HasWslPathPrefix(localPath) && wsl.IsWsl() {
+			localPath, err = wsl.ConvertWindowsPathToWslPath(localPath)
+			if err != nil {
+				return []DevcontainerInfo{}, fmt.Errorf("error converting path: %s", err)
+			}
+		}
 		name := parts[listPartLocalFolder]
 		if name == "" {
 			// No local folder => use dockercompose parts
@@ -67,13 +78,6 @@ func ListDevcontainers() ([]DevcontainerInfo, error) {
 			// get the last path segment for the name
 			if index := strings.LastIndexAny(name, "/\\"); index >= 0 {
 				name = name[index+1:]
-			}
-		}
-		localPath := parts[listPartLocalFolder]
-		if wsl.HasWslPathPrefix(localPath) && wsl.IsWsl() {
-			localPath, err = wsl.ConvertWindowsPathToWslPath(localPath)
-			if err != nil {
-				return []DevcontainerInfo{}, fmt.Errorf("error converting path: %s", err)
 			}
 		}
 		devcontainer := DevcontainerInfo{
