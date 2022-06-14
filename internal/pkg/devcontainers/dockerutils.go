@@ -119,7 +119,7 @@ type SourceInfo struct {
 // getMountFolderFromFolder walks up the path hierarchy checking for a git repo. If found that is returned, if not the original folder is used
 func getMountFolderFromFolder(folder string) (string, error) {
 
-	for currentFolder := folder; currentFolder != ""; currentFolder = path.Dir(currentFolder) {
+	for currentFolder := folder; currentFolder != "" && currentFolder != "/"; currentFolder = path.Dir(currentFolder) {
 		info, err := os.Stat(path.Join(currentFolder, ".git"))
 		if os.IsNotExist(err) {
 			continue // walk up the hierarchy
