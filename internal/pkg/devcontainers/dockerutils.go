@@ -43,7 +43,7 @@ var _ = listPartComposeContainerNumber
 
 // ListDevcontainers returns a list of devcontainers
 func ListDevcontainers() ([]DevcontainerInfo, error) {
-	cmd := exec.Command("docker", "ps", "--format", "{{.ID}}|{{.Label \"vsch.local.folder\"}}|{{.Label \"com.docker.compose.project\"}}|{{.Label \"com.docker.compose.service\"}}|{{.Label \"com.docker.compose.container-number\"}}|{{.Names}}")
+	cmd := exec.Command("docker", "ps", "--format", "{{.ID}}|{{.Label \"devcontainer.local_folder\"}}|{{.Label \"com.docker.compose.project\"}}|{{.Label \"com.docker.compose.service\"}}|{{.Label \"com.docker.compose.container-number\"}}|{{.Names}}")
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -93,9 +93,8 @@ func ListDevcontainers() ([]DevcontainerInfo, error) {
 
 // GetLocalFolderFromDevContainer looks up the local (host) folder name from the container labels
 func GetLocalFolderFromDevContainer(containerIDOrName string) (string, error) {
-	//docker inspect cool_goldberg --format '{{ index .Config.Labels "vsch.local.folder" }}'
 
-	cmd := exec.Command("docker", "inspect", containerIDOrName, "--format", "{{ index .Config.Labels \"vsch.local.folder\" }}")
+	cmd := exec.Command("docker", "inspect", containerIDOrName, "--format", "{{ index .Config.Labels \"devcontainer.local_folder\" }}")
 
 	output, err := cmd.Output()
 	if err != nil {
