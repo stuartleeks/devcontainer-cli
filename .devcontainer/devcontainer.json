@@ -1,4 +1,4 @@
-// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
+ -y// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/go
 {
 	"name": "devcontainer-cli",

@@ -49,7 +49,6 @@ ENV GO111MODULE=on
 # Install Go tools
 ARG GO_PLS_VERSION=0.7.2
 ARG DLV_VERSION=1.7.2
-ARG GO_RELEASER_VERSION=0.180.3
 ARG GOLANGCI_LINT_VERSION=1.42.1
 RUN \
     # --> Delve for debugging
@@ -61,7 +60,9 @@ RUN \
     # --> GolangCI-lint
     && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v${GOLANGCI_LINT_VERSION} \
     # --> Go releaser 
-    && curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh -s -- v${GO_RELEASER_VERSION} \
+    && echo 'deb [trusted=yes] https://repo.goreleaser.com/apt/ /' | sudo tee /etc/apt/sources.list.d/goreleaser.list \
+    && sudo apt update \
+    && sudo apt install goreleaser -y \
     # --> Install junit converter
     && go get github.com/jstemmer/go-junit-report@v0.9.1 \
     && sudo rm -rf /go/src/ \
