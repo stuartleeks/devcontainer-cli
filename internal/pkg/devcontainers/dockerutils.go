@@ -359,7 +359,11 @@ func getSshAuthSockValue(containerID string) (string, error) {
 }
 
 func getVscodeServerPath(containerID string) (string, error) {
-	path, err := getLatestFileMatch(containerID, "/vscode/vscode-server/bin/linux-x64/*")
+	path, err := getLatestFileMatch(containerID, "${HOME}/.vscode-server/bin/*")
+	if err == nil {
+		return path, err
+	}
+	path, err = getLatestFileMatch(containerID, "/vscode/vscode-server/bin/linux-x64/*")
 	if err == nil {
 		return path, err
 	}
