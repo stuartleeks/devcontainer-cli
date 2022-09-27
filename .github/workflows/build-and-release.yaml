@@ -29,6 +29,11 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Create dummy mount folders
+      run: |
+        mkdir -p ~/.config/gh
+        mkdir -p ~/.azure
+
     - name: Build and run CLI
       uses: devcontainers/ci@v0.2
       env:
