@@ -18,6 +18,9 @@ else
   fi
 fi
 
+echo "Prechown"
+git status 
+
 sudo chown -R $(whoami) .
 
 # Set version for release (picked up later by goreleaser)
@@ -25,7 +28,13 @@ git tag -f v0.1.$BUILD_NUMBER
 
 export GOVERSION=$(go version)
 
+echo "Prelint"
+git status 
+
 make lint
+
+echo "Postlint"
+git status 
 
 if [ -z ${PUBLISH} ]; then
   echo "Running with --skip-publish as PUBLISH not set"
