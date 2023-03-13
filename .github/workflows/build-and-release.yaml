@@ -35,7 +35,7 @@ jobs:
         mkdir -p ~/.azure
 
     - name: Build and run CLI
-      uses: devcontainers/ci@v0.2
+      uses: devcontainers/ci@v0.3
       env:
         GITHUB_TOKEN: ${{ secrets.GH_CROSS_REPO_TOKEN }}
         BUILD_NUMBER: ${{ github.run_id }}
