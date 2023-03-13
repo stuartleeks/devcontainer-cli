@@ -271,12 +271,26 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 		fmt.Println("Continuing without overriding PATH...")
 	}
 
-	statusWriter.Printf("Getting code IPC SOCK")
-	ipcSock, err := getVscodeIpcSock(containerID)
+	statusWriter.Printf("Getting VSCODE_IPC_HOOK_CLI")
+	vscodeIpcSock, err := getVscodeIpcSock(containerID)
 	if err != nil {
-		ipcSock = ""
-		fmt.Printf("Warning; Failed to get VS Code IPC SOCK: %s\n", err)
+		vscodeIpcSock = ""
+		fmt.Printf("Warning; Failed to get VSCODE_IPC_HOOK_CLI: %s\n", err)
 		fmt.Println("Continuing without setting VSCODE_IPC_HOOK_CLI...")
+	}
+	statusWriter.Printf("Getting REMOTE_CONTAINERS_IPC")
+	remoteContainersIpcSock, err := getRemoteContainersIpcSock(containerID)
+	if err != nil {
+		remoteContainersIpcSock = ""
+		fmt.Printf("Warning; Failed to get REMOTE_CONTAINERS_IPC: %s\n", err)
+		fmt.Println("Continuing without setting REMOTE_CONTAINERS_IPC...")
+	}
+	statusWriter.Printf("Getting VSCODE_GIT_IPC_HANDLE")
+	vscodeGitIpcSock, err := getGitIpcSock(containerID)
+	if err != nil {
+		vscodeGitIpcSock = ""
+		fmt.Printf("Warning; Failed to get VSCODE_GIT_IPC_HANDLE: %s\n", err)
+		fmt.Println("Continuing without setting VSCODE_GIT_IPC_HANDLE...")
 	}
 
 	mountPath := sourceInfo.DockerMount.Destination
@@ -319,8 +333,14 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 	if containerPath != "" {
 		dockerArgs = append(dockerArgs, "--env", "PATH="+containerPath)
 	}
-	if ipcSock != "" {
-		dockerArgs = append(dockerArgs, "--env", "VSCODE_IPC_HOOK_CLI="+ipcSock)
+	if vscodeIpcSock != "" {
+		dockerArgs = append(dockerArgs, "--env", "VSCODE_IPC_HOOK_CLI="+vscodeIpcSock)
+	}
+	if remoteContainersIpcSock != "" {
+		dockerArgs = append(dockerArgs, "--env", "REMOTE_CONTAINERS_IPC="+remoteContainersIpcSock)
+	}
+	if vscodeGitIpcSock != "" {
+		dockerArgs = append(dockerArgs, "--env", "VSCODE_GIT_IPC_HANDLE="+vscodeGitIpcSock)
 	}
 	dockerArgs = append(dockerArgs, containerID)
 	dockerArgs = append(dockerArgs, args...)
@@ -371,6 +391,12 @@ func getVscodeServerPath(containerID string) (string, error) {
 }
 func getVscodeIpcSock(containerID string) (string, error) {
 	return getLatestFileMatch(containerID, "\"${TMPDIR:-/tmp}\"/vscode-ipc-*")
+}
+func getRemoteContainersIpcSock(containerID string) (string, error) {
+	return getLatestFileMatch(containerID, "\"${TMPDIR:-/tmp}\"/vscode-remote-containers-ipc-*")
+}
+func getGitIpcSock(containerID string) (string, error) {
+	return getLatestFileMatch(containerID, "\"${TMPDIR:-/tmp}\"/vscode-git-*")
 }
 
 // getLatestFileMatch lists files matching `pattern` in the container and returns the latest filename
