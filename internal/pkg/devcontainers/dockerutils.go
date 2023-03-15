@@ -251,10 +251,11 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 
 	statusWriter.Printf("Getting container PATH")
 	containerPath, err := getContainerEnvVar(containerID, "PATH")
+	vscodeServerPath := ""
 	if err == nil {
 		// Got the PATH
 		statusWriter.Printf("Getting code server path")
-		vscodeServerPath, err := getVscodeServerPath(containerID)
+		vscodeServerPath, err = getVscodeServerPath(containerID, userName)
 		if err == nil {
 			// Got the VS Code server location - add bin subfolder to PATH
 			containerPath = strings.TrimSpace(containerPath)
@@ -269,6 +270,13 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 		containerPath = ""
 		fmt.Printf("Warning: Failed to get PATH value for container: %s\n", err)
 		fmt.Println("Continuing without overriding PATH...")
+	}
+
+	browser := ""
+	if vscodeServerPath == "" {
+		fmt.Printf("Warning: VS Code Server location not found. Continuing without setting BROWSER...")
+	} else {
+		browser = fmt.Sprintf("%s/helpers/browser.sh", vscodeServerPath)
 	}
 
 	statusWriter.Printf("Getting VSCODE_IPC_HOOK_CLI")
@@ -349,6 +357,9 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 	if vscodeGitIpcSock != "" {
 		dockerArgs = append(dockerArgs, "--env", "VSCODE_GIT_IPC_HANDLE="+vscodeGitIpcSock)
 	}
+	if browser != "" {
+		dockerArgs = append(dockerArgs, "--env", "BROWSER="+browser)
+	}
 	dockerArgs = append(dockerArgs, containerID)
 	dockerArgs = append(dockerArgs, args...)
 
@@ -382,34 +393,38 @@ func getSshAuthSockValue(containerID string) (string, error) {
 	// Host has SSH_AUTH_SOCK set, so expecting the dev container to have forwarding set up
 	// Find the latest /tmp/vscode-ssh-auth-<...>.sock
 
-	return getLatestFileMatch(containerID, "\"${TMPDIR:-/tmp}\"/vscode-ssh-auth-*")
+	return getLatestFileMatch(containerID, "", "\"${TMPDIR:-/tmp}\"/vscode-ssh-auth-*")
 }
 
-func getVscodeServerPath(containerID string) (string, error) {
-	path, err := getLatestFileMatch(containerID, "${HOME}/.vscode-server/bin/*")
+func getVscodeServerPath(containerID string, userName string) (string, error) {
+	path, err := getLatestFileMatch(containerID, userName, "${HOME}/.vscode-server/bin/*")
 	if err == nil {
 		return path, err
 	}
-	path, err = getLatestFileMatch(containerID, "/vscode/vscode-server/bin/linux-x64/*")
+	path, err = getLatestFileMatch(containerID, "", "/vscode/vscode-server/bin/linux-x64/*")
 	if err == nil {
 		return path, err
 	}
-	return getLatestFileMatch(containerID, "/vscode/vscode-server/bin/x64/*")
+	return getLatestFileMatch(containerID, "", "/vscode/vscode-server/bin/x64/*")
 }
 func getVscodeIpcSock(containerID string) (string, error) {
-	return getLatestFileMatch(containerID, "\"${TMPDIR:-/tmp}\"/vscode-ipc-*")
+	return getLatestFileMatch(containerID, "", "\"${TMPDIR:-/tmp}\"/vscode-ipc-*")
 }
 func getRemoteContainersIpcSock(containerID string) (string, error) {
-	return getLatestFileMatch(containerID, "\"${TMPDIR:-/tmp}\"/vscode-remote-containers-ipc-*")
+	return getLatestFileMatch(containerID, "", "\"${TMPDIR:-/tmp}\"/vscode-remote-containers-ipc-*")
 }
 func getGitIpcSock(containerID string, userID string) (string, error) {
-	return getLatestFileMatch(containerID, fmt.Sprintf("\"${TMPDIR:-/tmp}\"/user/%s/vscode-git-*", userID))
+	return getLatestFileMatch(containerID, "", fmt.Sprintf("\"${TMPDIR:-/tmp}\"/user/%s/vscode-git-*", userID))
 }
 
 // getLatestFileMatch lists files matching `pattern` in the container and returns the latest filename
-func getLatestFileMatch(containerID string, pattern string) (string, error) {
+func getLatestFileMatch(containerID string, userName string, pattern string) (string, error) {
 
-	dockerArgs := []string{"exec", containerID, "bash", "-c", fmt.Sprintf("ls -t -d -1 %s", pattern)}
+	dockerArgs := []string{"exec"}
+	if userName != "" {
+		dockerArgs = append(dockerArgs, "--user", userName)
+	}
+	dockerArgs = append(dockerArgs, containerID, "bash", "-c", fmt.Sprintf("ls -t -d -1 %s", pattern))
 	dockerCmd := exec.Command("docker", dockerArgs...)
 	buf, err := dockerCmd.CombinedOutput()
 	if err != nil {
