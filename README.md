@@ -4,11 +4,13 @@ devcontainer-cli is the start of a CLI to improve the experience of working with
 
 **Status: this is a pet project that I've been experimenting with. It is not supported and you should expect bugs :-)**
 
+**NOTE: To avoid conflicts with the [official CLI](https://github.com/devcontainers/cli) the binary for this project has been renamed to `devcontainerx`**
+
 ## Installation
 
 Head to the [latest release page](https://github.com/stuartleeks/devcontainer-cli/releases/latest) and download the archive for your platform.
 
-Extract `devcontainer` from the archive and place in a folder in your `PATH`.
+Extract `devcontainerx` from the archive and place in a folder in your `PATH`.
 
 You can also install using `homebrew` with `brew install stuartleeks/tap/devcontainer`
 
@@ -27,16 +29,16 @@ sudo -E ./install.sh
 To enable bash completion, add the following to you `~/.bashrc` file:
 
 ```bash
-source <(devcontainer completion bash)
+source <(devcontainerx completion bash)
 ```
 
-Or to alias `devcontainer` (to `dc` in this example):
+Or to alias `devcontainerx` (to `dcx` in this example):
 
 ```bash
-alias dc=devcontainer
-complete -F __start_devcontainer dc
+alias dcx=devcontainerx
+complete -F __start_devcontainerx dcx
 ```
 
 ## Docs
 
-See [the documentation](https://stuartleeks.github.io/devcontainer-cli)  on how to work with `devcontainer`.
+See [the documentation](https://stuartleeks.github.io/devcontainer-cli)  on how to work with `devcontainerx`.
