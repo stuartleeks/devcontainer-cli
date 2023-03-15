@@ -285,11 +285,18 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 		fmt.Printf("Warning; Failed to get REMOTE_CONTAINERS_IPC: %s\n", err)
 		fmt.Println("Continuing without setting REMOTE_CONTAINERS_IPC...")
 	}
-	statusWriter.Printf("Getting VSCODE_GIT_IPC_HANDLE")
-	vscodeGitIpcSock, err := getGitIpcSock(containerID)
-	if err != nil {
-		vscodeGitIpcSock = ""
-		fmt.Printf("Warning; Failed to get VSCODE_GIT_IPC_HANDLE: %s\n", err)
+	statusWriter.Printf("Getting container User ID")
+	vscodeGitIpcSock := ""
+	userID, err := getContainerUserID(containerID, userName)
+	if err == nil {
+		statusWriter.Printf("Getting VSCODE_GIT_IPC_HANDLE")
+		vscodeGitIpcSock, err = getGitIpcSock(containerID, userID)
+		if err != nil {
+			fmt.Printf("Warning; Failed to get VSCODE_GIT_IPC_HANDLE: %s\n", err)
+			fmt.Println("Continuing without setting VSCODE_GIT_IPC_HANDLE...")
+		}
+	} else {
+		fmt.Printf("Warning; Failed to get container User ID: %s\n", err)
 		fmt.Println("Continuing without setting VSCODE_GIT_IPC_HANDLE...")
 	}
 
@@ -395,8 +402,8 @@ func getVscodeIpcSock(containerID string) (string, error) {
 func getRemoteContainersIpcSock(containerID string) (string, error) {
 	return getLatestFileMatch(containerID, "\"${TMPDIR:-/tmp}\"/vscode-remote-containers-ipc-*")
 }
-func getGitIpcSock(containerID string) (string, error) {
-	return getLatestFileMatch(containerID, "\"${TMPDIR:-/tmp}\"/vscode-git-*")
+func getGitIpcSock(containerID string, userID string) (string, error) {
+	return getLatestFileMatch(containerID, fmt.Sprintf("\"${TMPDIR:-/tmp}\"/user/%s/vscode-git-*", userID))
 }
 
 // getLatestFileMatch lists files matching `pattern` in the container and returns the latest filename
@@ -430,6 +437,25 @@ func getContainerEnvVar(containerID string, varName string) (string, error) {
 	}
 
 	return string(buf), nil
+}
+
+// getContainerUserID gets the UID of the specified user in the container
+func getContainerUserID(containerID string, userName string) (string, error) {
+
+	dockerArgs := []string{"exec", containerID, "bash", "-c", fmt.Sprintf("id -u %s", userName)}
+	dockerCmd := exec.Command("docker", dockerArgs...)
+	buf, err := dockerCmd.CombinedOutput()
+	if err != nil {
+		errMessage := string(buf)
+		return "", fmt.Errorf("Docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
+	}
+
+	output := string(buf)
+	lines := strings.Split(output, "\n")
+	if len(lines) <= 0 {
+		return "", nil
+	}
+	return strings.TrimSpace(lines[0]), nil
 }
 
 func testContainerPathExists(containerID string, path string) (bool, error) {
