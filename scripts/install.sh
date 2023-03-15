@@ -20,5 +20,5 @@ LATEST_VERSION=$(curl --silent "https://api.github.com/repos/stuartleeks/devcont
 echo $LATEST_VERSION
 mkdir -p ~/bin
 wget https://github.com/stuartleeks/devcontainer-cli/releases/download/${LATEST_VERSION}/devcontainer-cli_${OS}_${ARCH}.tar.gz
-tar -C ~/bin -zxvf devcontainer-cli_${OS}_${ARCH}.tar.gz devcontainer
-chmod +x ~/bin/devcontainer
+tar -C ~/bin -zxvf devcontainer-cli_${OS}_${ARCH}.tar.gz devcontainerx
+chmod +x ~/bin/devcontainerx

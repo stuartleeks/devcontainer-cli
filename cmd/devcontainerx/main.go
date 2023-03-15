@@ -17,7 +17,7 @@ var (
 func main() {
 
 	rootCmd := &cobra.Command{
-		Use: "devcontainer",
+		Use: "devcontainerx",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			update.PeriodicCheckForUpdate(version)
 		},

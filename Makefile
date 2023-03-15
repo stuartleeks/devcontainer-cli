@@ -6,7 +6,7 @@ help: ## show this help
 
 
 build: fmt ## Build devcontainer cli
-	go build ./cmd/devcontainer
+	go build ./cmd/devcontainerx
 
 lint: build ## Build and lint
 	golangci-lint run

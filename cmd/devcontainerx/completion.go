@@ -14,18 +14,18 @@ func createCompleteCommand(rootCmd *cobra.Command) *cobra.Command {
 		Short: "Generates bash completion scripts",
 		Long: `To load completion run
 	
-	. <(devcontainer completion SHELL)
+	. <(devcontainerx completion SHELL)
 
 	Valid values for SHELL are : bash, fish, powershell, zsh
 	
 	For example, to configure your bash shell to load completions for each session add to your bashrc
 	
 	# ~/.bashrc or ~/.profile
-	source <(devcontainer completion)
+	source <(devcontainerx completion)
 
 	# if you want to alias the CLI:
-	alias dc=devcontainer
-    source <(devcontainer completion bash | sed s/devcontainer/dc/g)
+	alias dcx=devcontainerx
+    source <(devcontainerx completion bash | sed s/devcontainerx/dcx/g)
 
 	`,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {

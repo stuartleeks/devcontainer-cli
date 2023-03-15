@@ -1,7 +1,7 @@
 builds:
 - env:
   - CGO_ENABLED=0
-  binary: devcontainer
+  binary: devcontainerx
   goos:
     - linux
     - darwin
@@ -9,7 +9,7 @@ builds:
   goarch:
     - 386
     - amd64
-  main: ./cmd/devcontainer/
+  main: ./cmd/devcontainerx/
   ldflags:
     - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.Date}} -X "main.goversion={{.Env.GOVERSION}}"
 
@@ -29,9 +29,9 @@ brews:
     homepage: https://github.com/stuartleeks/devcontainer-cli
     description: CLI for working with Visual Studio Code devcontainers
     install: |
-      bin.install "devcontainer" 
+      bin.install "devcontainerx"
     test: |
-      system "#{bin}/devcontainer --version"
+      system "#{bin}/devcontainerx --version"
 
 changelog:
   sort: asc
