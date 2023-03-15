@@ -239,6 +239,12 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 	if err != nil {
 		return err
 	}
+	if userName == "" {
+		userName, err = getUserNameFromRunningContainer(containerID)
+		if err != nil {
+			return err
+		}
+	}
 
 	statusWriter.Printf("Checking for SSH_AUTH_SOCK")
 	sshAuthSockValue, err := getSshAuthSockValue(containerID)
@@ -484,4 +490,29 @@ func testContainerPathExists(containerID string, path string) (bool, error) {
 
 	response := strings.TrimSpace(string(buf))
 	return response == "0", nil
+}
+
+func getUserNameFromRunningContainer(containerID string) (string, error) {
+	dockerArgs := []string{"inspect", containerID, "--format", "{{index .Config.Labels \"devcontainer.metadata\" }}"}
+	dockerCmd := exec.Command("docker", dockerArgs...)
+	buf, err := dockerCmd.CombinedOutput()
+	if err != nil {
+		errMessage := string(buf)
+		return "", fmt.Errorf("Docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
+	}
+
+	var metadata []interface{}
+	err = json.Unmarshal(buf, &metadata)
+	if err != nil {
+		return "", nil
+	}
+
+	for _, value := range metadata {
+		if valueMap, ok := value.(map[string]interface{}); ok {
+			if userName, ok := valueMap["remoteUser"]; ok {
+				return userName.(string), nil
+			}
+		}
+	}
+	return "", nil
 }
