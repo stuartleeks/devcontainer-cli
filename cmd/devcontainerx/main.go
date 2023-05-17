@@ -27,6 +27,7 @@ func main() {
 	rootCmd.AddCommand(createConfigCommand())
 	rootCmd.AddCommand(createExecCommand())
 	rootCmd.AddCommand(createListCommand())
+	rootCmd.AddCommand(createShowCommand())
 	rootCmd.AddCommand(createTemplateCommand())
 	if config.GetExperimentalFeaturesEnabled() {
 		rootCmd.AddCommand(createSnippetCommand())

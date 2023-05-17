@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -61,6 +62,54 @@ func createListCommand() *cobra.Command {
 	return cmdList
 }
 
+func createShowCommand() *cobra.Command {
+	var argDevcontainerName string
+	cmd := &cobra.Command{
+		Use:   "show --name <name>",
+		Short: "Show devcontainer info",
+		Long:  "Show information about a running dev container",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			devcontainers, err := devcontainers.ListDevcontainers()
+			if err != nil {
+				return err
+			}
+			containerIDOrName := argDevcontainerName
+
+			// Get container ID
+			for _, devcontainer := range devcontainers {
+				if devcontainer.ContainerName == containerIDOrName ||
+					devcontainer.DevcontainerName == containerIDOrName ||
+					devcontainer.ContainerID == containerIDOrName {
+					output, err := json.MarshalIndent(devcontainer, "", "\t")
+					if err != nil {
+						return fmt.Errorf("Failed to serialise devcontainer info: %s", err)
+					}
+					fmt.Printf("%s\n", output)
+					return nil
+				}
+			}
+
+			return fmt.Errorf("Failed to find a matching (running) dev container for %q", containerIDOrName)
+		},
+	}
+	cmd.Flags().StringVarP(&argDevcontainerName, "name", "n", "", "name of dev container to exec into")
+
+	_ = cmd.RegisterFlagCompletionFunc("name", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		devcontainers, err := devcontainers.ListDevcontainers()
+		if err != nil {
+			os.Exit(1)
+		}
+		names := []string{}
+		for _, devcontainer := range devcontainers {
+			names = append(names, devcontainer.DevcontainerName)
+		}
+		sort.Strings(names)
+		return names, cobra.ShellCompDirectiveNoFileComp
+
+	})
+	return cmd
+}
+
 func countBooleans(values ...bool) int {
 	count := 0
 	for _, v := range values {
@@ -82,7 +131,7 @@ func createExecCommand() *cobra.Command {
 		Short: "Execute a command in a devcontainer",
 		Long:  "Execute a command in a devcontainer, similar to `docker exec`",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			fmt.Printf("*** %q\n\n\n", argDevcontainerName)
 			// Default to executing /bin/bash
 			if len(args) == 0 {
 				args = []string{"/bin/bash"}
