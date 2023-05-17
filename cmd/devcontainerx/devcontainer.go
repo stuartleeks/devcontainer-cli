@@ -131,7 +131,6 @@ func createExecCommand() *cobra.Command {
 		Short: "Execute a command in a devcontainer",
 		Long:  "Execute a command in a devcontainer, similar to `docker exec`",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Printf("*** %q\n\n\n", argDevcontainerName)
 			// Default to executing /bin/bash
 			if len(args) == 0 {
 				args = []string{"/bin/bash"}
