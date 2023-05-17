@@ -24,10 +24,10 @@ import (
 
 // DevcontainerInfo holds details about a devcontainer
 type DevcontainerInfo struct {
-	ContainerID      string
-	ContainerName    string
-	DevcontainerName string
-	LocalFolderPath  string
+	ContainerID      string `json:"containerID"`
+	ContainerName    string `json:"containerName"`
+	DevcontainerName string `json:"devcontainerName"`
+	LocalFolderPath  string `json:"localFolderPath"`
 }
 
 const (
