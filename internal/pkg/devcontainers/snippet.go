@@ -320,6 +320,7 @@ func insertDockerfileSnippet(projectFolder string, dockerfileFilename string, sn
 	}
 
 	content := newContent.String()
+	// TODO - decide whether to support .devcontainer.json or just remove snippet support
 	values, err := getSubstitutionValuesFromFile(filepath.Join(projectFolder, ".devcontainer/devcontainer.json"))
 	if err != nil {
 		return fmt.Errorf("failed to get dev container values: %s", err)
@@ -358,6 +359,7 @@ func mergeJSON(projectFolder string, snippet *DevcontainerSnippet, relativeMerge
 		return err
 	}
 
+	// TODO - decide whether to support .devcontainer.json or just remove snippet support
 	values, err := getSubstitutionValuesFromFile(filepath.Join(projectFolder, ".devcontainer/devcontainer.json"))
 	if err != nil {
 		return fmt.Errorf("failed to get dev container values: %s", err)
