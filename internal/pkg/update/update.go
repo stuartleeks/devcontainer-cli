@@ -2,11 +2,12 @@ package update
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/blang/semver"
 	"github.com/rhysd/go-github-selfupdate/selfupdate"
-	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/status"
 )
 
 func CheckForUpdate(currentVersion string) (*selfupdate.Release, error) {
@@ -29,7 +30,12 @@ func CheckForUpdate(currentVersion string) (*selfupdate.Release, error) {
 func PeriodicCheckForUpdate(currentVersion string) {
 	const checkInterval time.Duration = 24 * time.Hour
 
-	lastCheck := config.GetLastUpdateCheck()
+	if os.Getenv("DEVCONTAINERX_SKIP_UPDATE") != "" {
+		// Skip update check
+		return
+	}
+
+	lastCheck := status.GetLastUpdateCheck()
 
 	if time.Now().Before(lastCheck.Add(checkInterval)) {
 		return
@@ -40,8 +46,8 @@ func PeriodicCheckForUpdate(currentVersion string) {
 		fmt.Printf("Error checking for updates: %s", err)
 	}
 
-	config.SetLastUpdateCheck(time.Now())
-	if err = config.SaveConfig(); err != nil {
+	status.SetLastUpdateCheck(time.Now())
+	if err = status.SaveStatus(); err != nil {
 		fmt.Printf("Error saving last update check time: :%s\n", err)
 	}
 
