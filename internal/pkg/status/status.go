@@ -67,6 +67,5 @@ func SaveStatus() error {
 		return err
 	}
 	configFilePath := filepath.Join(configPath, "devcontainer-cli-status.json")
-	fmt.Printf("HERE: %q\n", configFilePath)
 	return viper.WriteConfigAs(configFilePath)
 }
