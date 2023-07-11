@@ -234,7 +234,10 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 	localPath := sourceInfo.DevcontainerFolder
 
 	statusWriter.Printf("Getting user name")
-	devcontainerJSONPath := path.Join(localPath, ".devcontainer/devcontainer.json")
+	devcontainerJSONPath, err := getDevContainerJsonPath(localPath)
+	if err != nil {
+		return err
+	}
 	userName, err := GetDevContainerUserName(devcontainerJSONPath)
 	if err != nil {
 		return err

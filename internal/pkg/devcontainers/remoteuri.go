@@ -57,7 +57,10 @@ func GetWorkspaceMountPath(folderPath string) (string, error) {
 		}
 	}
 
-	devcontainerDefinitionPath := filepath.Join(folderPath, ".devcontainer/devcontainer.json")
+	devcontainerDefinitionPath, err := getDevContainerJsonPath(folderPath)
+	if err != nil {
+		return "", fmt.Errorf("Error getting devcontainer definition path: %s", err)
+	}
 	buf, err := ioutil.ReadFile(devcontainerDefinitionPath)
 	if err != nil {
 		return "", fmt.Errorf("Error loading devcontainer definition: %s", err)

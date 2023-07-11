@@ -76,6 +76,7 @@ func getTemplatesFromFolder(folder string) ([]DevcontainerTemplate, error) {
 		if !fi.IsDir() {
 			return false
 		}
+		// TOODO - add support for templates with .devcontainer.json rather than .devcontainer folder
 		devcontainerJsonPath := filepath.Join(parentPath, fi.Name(), ".devcontainer/devcontainer.json")
 		devContainerJsonInfo, err := os.Stat(devcontainerJsonPath)
 		return err == nil && !devContainerJsonInfo.IsDir()
