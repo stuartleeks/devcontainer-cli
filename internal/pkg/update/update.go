@@ -14,12 +14,12 @@ func CheckForUpdate(currentVersion string) (*selfupdate.Release, error) {
 
 	latest, found, err := selfupdate.DetectLatest("stuartleeks/devcontainer-cli")
 	if err != nil {
-		return nil, fmt.Errorf("Error occurred while detecting version: %v", err)
+		return nil, fmt.Errorf("error occurred while detecting version: %v", err)
 	}
 
 	v, err := semver.Parse(currentVersion)
 	if err != nil {
-		return nil, fmt.Errorf("Error occurred while parsing version: %v", err)
+		return nil, fmt.Errorf("error occurred while parsing version: %v", err)
 	}
 
 	if !found || latest.Version.LTE(v) {
@@ -43,12 +43,12 @@ func PeriodicCheckForUpdate(currentVersion string) {
 	fmt.Println("Checking for updates...")
 	latest, err := CheckForUpdate(currentVersion)
 	if err != nil {
-		fmt.Printf("Error checking for updates: %s", err)
+		fmt.Printf("error checking for updates: %s", err)
 	}
 
 	status.SetLastUpdateCheck(time.Now())
 	if err = status.SaveStatus(); err != nil {
-		fmt.Printf("Error saving last update check time: :%s\n", err)
+		fmt.Printf("error saving last update check time: :%s", err)
 	}
 
 	if latest == nil {

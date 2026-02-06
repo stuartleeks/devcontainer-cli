@@ -10,5 +10,8 @@
         "apiVersion": 2,
         "showGlobalVariables": false,
         "debugAdapter": "legacy"
+    },
+    "chat.tools.terminal.autoApprove": {
+        "make": true
     }
 }

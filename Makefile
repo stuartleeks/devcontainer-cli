@@ -31,7 +31,7 @@ endif
 
 
 test:
-	richgo test -v ./...
+	go test -v ./...
 
 
 fmt:
@@ -39,5 +39,5 @@ fmt:
 
 
 post-create:
-	sudo chown vscode /go/pkg
-	go get -u github.com/kyoh86/richgo
+# 	#sudo chown vscode /go/pkg
+# 	# go get -u github.com/kyoh86/richgo

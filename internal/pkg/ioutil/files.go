@@ -3,36 +3,39 @@ package ioutil
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
 
 func CopyFolder(source string, target string) error {
-	copy := func(sourceFolder string, targetFolder string, item os.FileInfo) error {
-		return CopyFile(filepath.Join(sourceFolder, item.Name()), filepath.Join(targetFolder, item.Name()), item.Mode())
+	copy := func(sourceFolder string, targetFolder string, item os.DirEntry) error {
+		info, err := item.Info()
+		if err != nil {
+			return fmt.Errorf("error getting item info: %s", err)
+		}
+		return CopyFile(filepath.Join(sourceFolder, item.Name()), filepath.Join(targetFolder, item.Name()), info.Mode())
 	}
 	return processFolder(source, target, copy)
 }
 func LinkFolder(source string, target string) error {
-	symlink := func(sourceFolder string, targetFolder string, item os.FileInfo) error {
+	symlink := func(sourceFolder string, targetFolder string, item os.DirEntry) error {
 		return os.Symlink(filepath.Join(sourceFolder, item.Name()), filepath.Join(targetFolder, item.Name()))
 	}
 	return processFolder(source, target, symlink)
 }
 
-func processFolder(source string, target string, fileHandler func(sourceFolder string, targetFolder string, item os.FileInfo) error) error {
+func processFolder(source string, target string, fileHandler func(sourceFolder string, targetFolder string, item os.DirEntry) error) error {
 	sourceItem, err := os.Stat(source)
 	if err != nil {
-		return fmt.Errorf("Error reading source folder: %s\n", err)
+		return fmt.Errorf("error reading source folder: %s", err)
 	}
 	if err = os.Mkdir(target, sourceItem.Mode()); err != nil {
-		return fmt.Errorf("Error creating directory '%s': %s", target, err)
+		return fmt.Errorf("error creating directory '%s': %s", target, err)
 	}
 
-	sourceSubItems, err := ioutil.ReadDir(source)
+	sourceSubItems, err := os.ReadDir(source)
 	if err != nil {
-		return fmt.Errorf("Error reading source folder contents: %s\n", err)
+		return fmt.Errorf("error reading source folder contents: %s", err)
 	}
 
 	for _, sourceSubItem := range sourceSubItems {
@@ -54,13 +57,13 @@ func CopyFile(source string, target string, perm os.FileMode) error {
 	if err != nil {
 		return err
 	}
-	defer sourceFile.Close()
+	defer func() { _ = sourceFile.Close() }()
 
 	targetFile, err := os.OpenFile(target, os.O_RDWR|os.O_CREATE|os.O_EXCL|os.O_TRUNC, perm)
 	if err != nil {
 		return err
 	}
-	defer targetFile.Close()
+	defer func() { _ = targetFile.Close() }()
 	_, err = io.Copy(targetFile, sourceFile)
 	return err
 }

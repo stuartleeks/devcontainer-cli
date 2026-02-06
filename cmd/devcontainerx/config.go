@@ -25,7 +25,7 @@ func createConfigShowCommand() *cobra.Command {
 			c := config.GetAll()
 			jsonConfig, err := json.MarshalIndent(c, "", "  ")
 			if err != nil {
-				return fmt.Errorf("Error converting to JSON: %s\n", err)
+				return fmt.Errorf("error converting to JSON: %s", err)
 			}
 			fmt.Println(string(jsonConfig))
 			return nil
@@ -40,7 +40,7 @@ func createConfigWriteCommand() *cobra.Command {
 		Long:  "Write out the config file to ~/.devcontainer-cli/devcontainer-cli.json",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := config.SaveConfig(); err != nil {
-				return fmt.Errorf("Error saving config: %s\n", err)
+				return fmt.Errorf("error saving config: %s", err)
 			}
 			fmt.Println("Config saved")
 			return nil

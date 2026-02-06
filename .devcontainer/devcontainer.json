@@ -1,81 +1,38 @@
- -y// For format details, see https://aka.ms/vscode-remote/devcontainer.json or this file's README at:
-// https://github.com/microsoft/vscode-dev-containers/tree/v0.117.1/containers/go
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/go
 {
-	"name": "devcontainer-cli",
-	"dockerFile": "Dockerfile",
+	"name": "devcontainerx",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"build": {
-		"cacheFrom": "ghcr.io/stuartleeks/devcontainer-cli-devcontainer",
-		"args": {
-			// To ensure that the group ID for the docker group in the container
-			// matches the group ID on the host, add this to your .bash_profile on the host
-			// 		export DOCKER_GROUP_ID=$(getent group docker | awk -F ":" '{ print $3 }')
-			"DOCKER_GROUP_ID": "${localEnv:DOCKER_GROUP_ID}"
+		// Path is relataive to the devcontainer.json file.
+		"dockerfile": "Dockerfile"
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/docker-outside-of-docker": {},
+		"ghcr.io/stuartleeks/dev-container-features/shell-history:0": {},
+		"ghcr.io/guiyomh/features/golangci-lint:0": {
+			"version": "latest"
+		},
+		"ghcr.io/guiyomh/features/goreleaser:0": {
+			"version": "latest"
 		}
 	},
-	"runArgs": [
-		// Uncomment the next line to use a non-root user. On Linux, this will prevent
-		// new files getting created as root, but you may need to update the USER_UID
-		// and USER_GID in .devcontainer/Dockerfile to match your user if not 1000.
-		// "-u", "vscode",
-		"--cap-add=SYS_PTRACE",
-		"--security-opt",
-		"seccomp=unconfined",
-
-		// Mount go mod cache
-		"-v", "devcontainer-cli-gomodcache:/go/pkg",
-		// Use host network
-		"--network=host",
-	],
-
-	// Set *default* container specific settings.json values on container create.
-	"settings": { 
-		"terminal.integrated.shell.linux": "/bin/bash",
-		"go.gopath": "/go",
-		"go.useLanguageServer": true,
-		"[go]": {
-			"editor.snippetSuggestions": "none",
-			"editor.formatOnSave": true,
-			"editor.codeActionsOnSave": {
-				"source.organizeImports": true,
-			}
-		},
-		"gopls": {
-			"usePlaceholders": true, // add parameter placeholders when completing a function
-			// Experimental settings
-			"completeUnimported": true, // autocomplete unimported packages
-			"deepCompletion": true, // enable deep completion
-		},
-		"files.eol": "\n", // formatting only supports LF line endings		
-	},
-	
-	// Add the IDs of extensions you want installed when the container is created.
-	"extensions": [
-		"golang.go",
-		"stuartleeks.vscode-go-by-example",
-		"darkriszty.markdown-table-prettify",
-        "davidanson.vscode-markdownlint",
-        "mushan.vscode-paste-image"
-	,
-		"ms-azuretools.vscode-docker",],
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "make post-create",
-
-	// Uncomment to connect as a non-root user. See https://aka.ms/vscode-remote/containers/non-root.
-	"remoteUser": "vscode",
-	"mounts": [
-		// Keep command history
-		"source=devcontainer-cli-bashhistory,target=/home/vscode/commandhistory",
-		// Mounts the .config/gh host folder into the dev container to pick up host gh CLI login details
-		// NOTE that mounting directly to ~/.config/gh makes ~/.config only root-writable
-		// Instead monut to another location and symlink in Dockerfile
-		"type=bind,source=${env:HOME}${env:USERPROFILE}/.config/gh,target=/config/gh",
-		// Mounts the .azure host folder into the dev container to pick up host az CLI login details
-		"type=bind,source=${env:HOME}${env:USERPROFILE}/.azure,target=/home/vscode/.azure",
-		// Mount host docker socket
-		"type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",	
-	],
+	// Configure tool-specific properties.
+	"customizations": {
+		// TODO
+		"extensions": [
+			"golang.go",
+			"stuartleeks.vscode-go-by-example",
+			"darkriszty.markdown-table-prettify",
+			"davidanson.vscode-markdownlint",
+			"mushan.vscode-paste-image",
+			"ms-azuretools.vscode-docker",
+		],
+	},
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
 }
