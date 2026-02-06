@@ -12,7 +12,8 @@ import (
 )
 
 // GetDevContainerURI gets the devcontainer URI for a folder to launch using the VS Code --folder-uri switch
-func GetDevContainerURI(folderPath string) (string, error) {
+// If subFolder is specified, it is appended to the workspaceMountPath
+func GetDevContainerURI(folderPath string, subFolder string) (string, error) {
 
 	absPath, err := filepath.Abs(folderPath)
 	if err != nil {
@@ -32,6 +33,9 @@ func GetDevContainerURI(folderPath string) (string, error) {
 	workspaceMountPath, err := GetWorkspaceMountPath(absPath)
 	if err != nil {
 		return "", err
+	}
+	if subFolder != "" {
+		workspaceMountPath = filepath.Join(workspaceMountPath, subFolder)
 	}
 	uri := fmt.Sprintf("vscode-remote://dev-container+%s%s", launchPathHex, workspaceMountPath)
 
