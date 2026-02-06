@@ -14,7 +14,7 @@
 			"version": "latest"
 		},
 		"ghcr.io/guiyomh/features/goreleaser:0": {
-			"version": "latest"
+			"version": "1.15.2"
 		}
 	},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
