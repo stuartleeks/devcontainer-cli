@@ -22,9 +22,9 @@ func GetTopLevelPath(path string) (string, error) {
 					return "", nil
 				}
 			}
-			return "", fmt.Errorf("Error git rev-parse --show-toplevel: %s", err)
+			return "", fmt.Errorf("error git rev-parse --show-toplevel: %s", err)
 		}
-		return "", fmt.Errorf("Error git rev-parse --show-toplevel: %s", err)
+		return "", fmt.Errorf("error git rev-parse --show-toplevel: %s", err)
 	}
 	return strings.TrimSpace(string(buf)), nil
 }

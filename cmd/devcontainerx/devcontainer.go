@@ -1,64 +1,39 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/devcontainers"
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/output"
 )
 
 func createListCommand() *cobra.Command {
-	var listIncludeContainerNames bool
-	var listVerbose bool
 	cmdList := &cobra.Command{
 		Use:   "list",
 		Short: "List devcontainers",
 		Long:  "Lists running devcontainers",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if listIncludeContainerNames && listVerbose {
-				fmt.Println("Can't use both verbose and include-container-names")
-				os.Exit(1)
-			}
-			devcontainers, err := devcontainers.ListDevcontainers()
+			outputFormat, query, err := output.GetOutputAndQueryValues(cmd, `[].{name: devcontainerName, containerName: containerName, containerID: containerID, localFolderPath: localFolderPath}`)
 			if err != nil {
 				return err
 			}
-			if listVerbose {
-				sort.Slice(devcontainers, func(i, j int) bool { return devcontainers[i].DevcontainerName < devcontainers[j].DevcontainerName })
-
-				w := new(tabwriter.Writer)
-				// minwidth, tabwidth, padding, padchar, flags
-				w.Init(os.Stdout, 8, 8, 0, '\t', 0)
-				defer w.Flush()
-
-				fmt.Fprintf(w, "%s\t%s\n", "DEVCONTAINER NAME", "CONTAINER NAME")
-				fmt.Fprintf(w, "%s\t%s\n", "-----------------", "--------------")
-
-				for _, devcontainer := range devcontainers {
-					fmt.Fprintf(w, "%s\t%s\n", devcontainer.DevcontainerName, devcontainer.ContainerName)
-				}
-				return nil
+			devcontainerList, err := devcontainers.ListDevcontainers()
+			if err != nil {
+				return err
 			}
-			names := []string{}
-			for _, devcontainer := range devcontainers {
-				names = append(names, devcontainer.DevcontainerName)
-				if listIncludeContainerNames {
-					names = append(names, devcontainer.ContainerName)
-				}
-			}
-			sort.Strings(names)
-			for _, name := range names {
-				fmt.Println(name)
+
+			err = output.OutputResult(os.Stdout, devcontainerList, outputFormat, query, []string{"name", "containerName", "containerID", "localFolderPath"})
+			if err != nil {
+				return fmt.Errorf("error outputting result: %s", err)
 			}
 			return nil
 		},
 	}
-	cmdList.Flags().BoolVar(&listIncludeContainerNames, "include-container-names", false, "Also include container names in the list")
-	cmdList.Flags().BoolVarP(&listVerbose, "verbose", "v", false, "Verbose output")
+
+	output.AddOutputAndQueryFlags(cmdList)
 	return cmdList
 }
 
@@ -69,30 +44,36 @@ func createShowCommand() *cobra.Command {
 		Short: "Show devcontainer info",
 		Long:  "Show information about a running dev container",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			devcontainers, err := devcontainers.ListDevcontainers()
+			outputFormat, query, err := output.GetOutputAndQueryValues(cmd, `[].{name: devcontainerName, containerName: containerName, containerID: containerID, localFolderPath: localFolderPath}`)
+			if err != nil {
+				return err
+			}
+			devcontainerList, err := devcontainers.ListDevcontainers()
 			if err != nil {
 				return err
 			}
 			containerIDOrName := argDevcontainerName
 
 			// Get container ID
-			for _, devcontainer := range devcontainers {
+			for _, devcontainer := range devcontainerList {
 				if devcontainer.ContainerName == containerIDOrName ||
 					devcontainer.DevcontainerName == containerIDOrName ||
 					devcontainer.ContainerID == containerIDOrName {
-					output, err := json.MarshalIndent(devcontainer, "", "\t")
+
+					wrapped := []devcontainers.DevcontainerInfo{devcontainer}
+					err = output.OutputResult(os.Stdout, wrapped, outputFormat, query, []string{"name", "containerName", "containerID", "localFolderPath"})
 					if err != nil {
-						return fmt.Errorf("Failed to serialise devcontainer info: %s", err)
+						return fmt.Errorf("error outputting result: %s", err)
 					}
-					fmt.Printf("%s\n", output)
 					return nil
 				}
 			}
 
-			return fmt.Errorf("Failed to find a matching (running) dev container for %q", containerIDOrName)
+			return fmt.Errorf("failed to find a matching (running) dev container for %q", containerIDOrName)
 		},
 	}
-	cmd.Flags().StringVarP(&argDevcontainerName, "name", "n", "", "name of dev container to exec into")
+	cmd.Flags().StringVarP(&argDevcontainerName, "name", "n", "", "name of dev container to show")
+	output.AddOutputAndQueryFlags(cmd)
 
 	_ = cmd.RegisterFlagCompletionFunc("name", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		devcontainers, err := devcontainers.ListDevcontainers()
@@ -171,7 +152,7 @@ func createExecCommand() *cobra.Command {
 				}
 
 				if containerID == "" {
-					return fmt.Errorf("Failed to find a matching (running) dev container for %q", containerIDOrName)
+					return fmt.Errorf("failed to find a matching (running) dev container for %q", containerIDOrName)
 				}
 			} else if argPromptForDevcontainer {
 				// prompt user
@@ -182,7 +163,7 @@ func createExecCommand() *cobra.Command {
 				selection := -1
 				_, _ = fmt.Scanf("%d", &selection)
 				if selection < 0 || selection >= len(devcontainerList) {
-					return fmt.Errorf("Invalid option")
+					return fmt.Errorf("invalid option")
 				}
 				containerID = devcontainerList[selection].ContainerID
 			} else {

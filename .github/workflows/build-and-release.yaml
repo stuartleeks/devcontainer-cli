@@ -43,6 +43,8 @@ jobs:
         BRANCH: ${{ github.ref }}
       with:
         imageName: ghcr.io/stuartleeks/devcontainer-cli-devcontainer
+        cacheFrom: ghcr.io/stuartleeks/devcontainer-cli-devcontainer
+        cacheTo: type=inline
         runCmd: |
           sudo chown -R $(whoami) /go/pkg
           ./scripts/ci_release.sh

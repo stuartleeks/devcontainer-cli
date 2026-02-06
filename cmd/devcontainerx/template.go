@@ -2,14 +2,13 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/devcontainers"
 	ioutil2 "github.com/stuartleeks/devcontainer-cli/internal/pkg/ioutil"
+	"github.com/stuartleeks/devcontainer-cli/internal/pkg/output"
 )
 
 func createTemplateCommand() *cobra.Command {
@@ -25,40 +24,29 @@ func createTemplateCommand() *cobra.Command {
 }
 
 func createTemplateListCommand() *cobra.Command {
-	var listVerbose bool
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "list templates",
 		Long:  "List devcontainer templates",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			outputFormat, query, err := output.GetOutputAndQueryValues(cmd, `[].{name: name, path: path}`)
+			if err != nil {
+				return err
+			}
 
 			templates, err := devcontainers.GetTemplates()
 			if err != nil {
 				return err
 			}
 
-			if listVerbose {
-				w := new(tabwriter.Writer)
-				// minwidth, tabwidth, padding, padchar, flags
-				w.Init(os.Stdout, 8, 8, 0, '\t', 0)
-				defer w.Flush()
-
-				fmt.Fprintf(w, "%s\t%s\n", "TEMPLATE NAME", "PATH")
-				fmt.Fprintf(w, "%s\t%s\n", "-------------", "----")
-
-				for _, template := range templates {
-					fmt.Fprintf(w, "%s\t%s\n", template.Name, template.Path)
-				}
-				return nil
-			}
-
-			for _, template := range templates {
-				fmt.Println(template.Name)
+			err = output.OutputResult(os.Stdout, templates, outputFormat, query, []string{"name", "path"})
+			if err != nil {
+				return fmt.Errorf("error outputting result: %s", err)
 			}
 			return nil
 		},
 	}
-	cmd.Flags().BoolVarP(&listVerbose, "verbose", "v", false, "Verbose output")
+	output.AddOutputAndQueryFlags(cmd)
 	return cmd
 }
 
@@ -85,12 +73,12 @@ func createTemplateAddCommand() *cobra.Command {
 
 			info, err := os.Stat("./.devcontainer")
 			if info != nil && err == nil {
-				return fmt.Errorf("Current folder already contains a .devcontainer folder - exiting")
+				return fmt.Errorf("current folder already contains a .devcontainer folder - exiting")
 			}
 
 			currentDirectory, err := os.Getwd()
 			if err != nil {
-				return fmt.Errorf("Error reading current directory: %s\n", err)
+				return fmt.Errorf("error reading current directory: %s", err)
 			}
 
 			err = devcontainers.CopyTemplateToFolder(template.Path, currentDirectory, devcontainerName)
@@ -138,25 +126,25 @@ func createTemplateAddLinkCommand() *cobra.Command {
 				return err
 			}
 			if template == nil {
-				return fmt.Errorf("Template '%s' not found\n", name)
+				return fmt.Errorf("template '%s' not found", name)
 			}
 
 			info, err := os.Stat("./.devcontainer")
 			if info != nil && err == nil {
-				return fmt.Errorf("Current folder already contains a .devcontainer folder - exiting")
+				return fmt.Errorf("current folder already contains a .devcontainer folder - exiting")
 			}
 
 			currentDirectory, err := os.Getwd()
 			if err != nil {
-				return fmt.Errorf("Error reading current directory: %s\n", err)
+				return fmt.Errorf("error reading current directory: %s", err)
 			}
 			if err = ioutil2.LinkFolder(template.Path, currentDirectory+"/.devcontainer"); err != nil {
-				return fmt.Errorf("Error linking folder: %s\n", err)
+				return fmt.Errorf("error linking folder: %s", err)
 			}
 
 			content := []byte("*\n")
-			if err := ioutil.WriteFile(currentDirectory+"/.devcontainer/.gitignore", content, 0644); err != nil { // -rw-r--r--
-				return fmt.Errorf("Error writing .gitignore: %s\n", err)
+			if err := os.WriteFile(currentDirectory+"/.devcontainer/.gitignore", content, 0644); err != nil { // -rw-r--r--
+				return fmt.Errorf("error writing .gitignore: %s", err)
 			}
 			return err
 		},

@@ -27,6 +27,7 @@ type DevcontainerInfo struct {
 	ContainerID      string `json:"containerID"`
 	ContainerName    string `json:"containerName"`
 	DevcontainerName string `json:"devcontainerName"`
+	FolderPath       string `json:"folderPath"`
 	LocalFolderPath  string `json:"localFolderPath"`
 }
 
@@ -47,23 +48,24 @@ func ListDevcontainers() ([]DevcontainerInfo, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		return []DevcontainerInfo{}, fmt.Errorf("Failed to read docker stdout: %v", err)
+		return []DevcontainerInfo{}, fmt.Errorf("failed to read docker stdout: %v", err)
 	}
 
 	reader := bytes.NewReader(output)
 	scanner := bufio.NewScanner(reader)
 	if scanner == nil {
-		return []DevcontainerInfo{}, fmt.Errorf("Failed to parse stdout")
+		return []DevcontainerInfo{}, fmt.Errorf("failed to parse stdout")
 	}
 	devcontainers := []DevcontainerInfo{}
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := strings.Split(line, "|")
-		localPath := parts[listPartLocalFolder]
-		if localPath == "" {
+		path := parts[listPartLocalFolder]
+		if path == "" {
 			// not a dev container
 			continue
 		}
+		localPath := path
 		if wsl.HasWslPathPrefix(localPath) && wsl.IsWsl() {
 			localPath, err = wsl.ConvertWindowsPathToWslPath(localPath)
 			if err != nil {
@@ -83,6 +85,7 @@ func ListDevcontainers() ([]DevcontainerInfo, error) {
 		devcontainer := DevcontainerInfo{
 			ContainerID:      parts[listPartID],
 			ContainerName:    parts[listPartContainerName],
+			FolderPath:       path,
 			LocalFolderPath:  localPath,
 			DevcontainerName: name,
 		}
@@ -98,7 +101,7 @@ func GetLocalFolderFromDevContainer(containerIDOrName string) (string, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("Failed to read docker stdout: %v", err)
+		return "", fmt.Errorf("failed to read docker stdout: %v", err)
 	}
 
 	return strings.TrimSpace(string(output)), nil
@@ -162,12 +165,15 @@ func GetSourceInfoFromDevContainer(containerIDOrName string) (SourceInfo, error)
 
 	output, err := cmd.Output()
 	if err != nil {
-		return SourceInfo{}, fmt.Errorf("Failed to read docker stdout: %v", err)
+		return SourceInfo{}, fmt.Errorf("failed to read docker stdout: %v", err)
 	}
 
 	var mount DockerMount
 	err = json.Unmarshal(output, &mount)
 	if err != nil {
+		fmt.Printf("Failed to parse JSON: %s\n", string(output))
+		fmt.Printf("containerIDOrName: %s\n", containerIDOrName)
+		fmt.Printf("mountFolder: %s\n", mountFolder)
 		return SourceInfo{}, fmt.Errorf("failed to parse JSON getting mount folder for container %q (path=%q): %s", containerIDOrName, mountFolder, err)
 	}
 
@@ -196,7 +202,7 @@ func GetClosestPathMatchForPath(devContainers []DevcontainerInfo, devcontainerPa
 	}
 	absPath, err := filepath.Abs(devcontainerPath)
 	if err != nil {
-		return DevcontainerInfo{}, fmt.Errorf("Error handling path %q: %s", devcontainerPath, err)
+		return DevcontainerInfo{}, fmt.Errorf("error handling path %q: %s", devcontainerPath, err)
 	}
 
 	matchingPaths := byLocalPathLength{}
@@ -207,7 +213,7 @@ func GetClosestPathMatchForPath(devContainers []DevcontainerInfo, devcontainerPa
 			testPath, err = wsl.ConvertWindowsPathToWslPath(testPath)
 			fmt.Println("Converted to..")
 			if err != nil {
-				return DevcontainerInfo{}, fmt.Errorf("Error converting path from dev container list (%q): %s", testPath, err)
+				return DevcontainerInfo{}, fmt.Errorf("error converting path from dev container list (%q): %s", testPath, err)
 			}
 		}
 		if strings.HasPrefix(absPath, testPath) {
@@ -215,7 +221,7 @@ func GetClosestPathMatchForPath(devContainers []DevcontainerInfo, devcontainerPa
 		}
 	}
 	if len(matchingPaths) == 0 {
-		return DevcontainerInfo{}, fmt.Errorf("Could not find running container for path %q", devcontainerPath)
+		return DevcontainerInfo{}, fmt.Errorf("could not find running container for path %q", devcontainerPath)
 	}
 
 	// return longest prefix match
@@ -378,11 +384,11 @@ func ExecInDevContainer(containerID string, workDir string, args []string) error
 
 	err = dockerCmd.Start()
 	if err != nil {
-		return fmt.Errorf("Exec: start error: %s", err)
+		return fmt.Errorf("exec: start error: %s", err)
 	}
 	err = dockerCmd.Wait()
 	if err != nil {
-		return fmt.Errorf("Exec: wait error: %s", err)
+		return fmt.Errorf("exec: wait error: %s", err)
 	}
 	return nil
 }
@@ -438,7 +444,7 @@ func getLatestFileMatch(containerID string, userName string, pattern string) (st
 	buf, err := dockerCmd.CombinedOutput()
 	if err != nil {
 		errMessage := string(buf)
-		return "", fmt.Errorf("Docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
+		return "", fmt.Errorf("docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
 	}
 
 	output := string(buf)
@@ -457,7 +463,7 @@ func getContainerEnvVar(containerID string, varName string) (string, error) {
 	buf, err := dockerCmd.CombinedOutput()
 	if err != nil {
 		errMessage := string(buf)
-		return "", fmt.Errorf("Docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
+		return "", fmt.Errorf("docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
 	}
 
 	return string(buf), nil
@@ -471,7 +477,7 @@ func getContainerUserID(containerID string, userName string) (string, error) {
 	buf, err := dockerCmd.CombinedOutput()
 	if err != nil {
 		errMessage := string(buf)
-		return "", fmt.Errorf("Docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
+		return "", fmt.Errorf("docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
 	}
 
 	output := string(buf)
@@ -488,7 +494,7 @@ func testContainerPathExists(containerID string, path string) (bool, error) {
 	buf, err := dockerCmd.CombinedOutput()
 	if err != nil {
 		errMessage := string(buf)
-		return false, fmt.Errorf("Docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
+		return false, fmt.Errorf("docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
 	}
 
 	response := strings.TrimSpace(string(buf))
@@ -501,7 +507,7 @@ func getUserNameFromRunningContainer(containerID string) (string, error) {
 	buf, err := dockerCmd.CombinedOutput()
 	if err != nil {
 		errMessage := string(buf)
-		return "", fmt.Errorf("Docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
+		return "", fmt.Errorf("docker exec error: %s (%s)", err, strings.TrimSpace(errMessage))
 	}
 
 	var metadata []interface{}

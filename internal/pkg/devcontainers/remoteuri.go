@@ -3,7 +3,7 @@ package devcontainers
 import (
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 
@@ -16,7 +16,7 @@ func GetDevContainerURI(folderPath string) (string, error) {
 
 	absPath, err := filepath.Abs(folderPath)
 	if err != nil {
-		return "", fmt.Errorf("Error handling path %q: %s", folderPath, err)
+		return "", fmt.Errorf("error handling path %q: %s", folderPath, err)
 	}
 
 	launchPath := absPath
@@ -59,16 +59,16 @@ func GetWorkspaceMountPath(folderPath string) (string, error) {
 
 	devcontainerDefinitionPath, err := getDevContainerJsonPath(folderPath)
 	if err != nil {
-		return "", fmt.Errorf("Error getting devcontainer definition path: %s", err)
+		return "", fmt.Errorf("error getting devcontainer definition path: %s", err)
 	}
-	buf, err := ioutil.ReadFile(devcontainerDefinitionPath)
+	buf, err := os.ReadFile(devcontainerDefinitionPath)
 	if err != nil {
-		return "", fmt.Errorf("Error loading devcontainer definition: %s", err)
+		return "", fmt.Errorf("error loading devcontainer definition: %s", err)
 	}
 
 	workspaceMountPath, err := getWorkspaceMountPathFromDevcontainerDefinition(buf)
 	if err != nil {
-		return "", fmt.Errorf("Error parsing devcontainer definition: %s", err)
+		return "", fmt.Errorf("error parsing devcontainer definition: %s", err)
 	}
 	if workspaceMountPath != "" {
 		return workspaceMountPath, nil
@@ -77,7 +77,7 @@ func GetWorkspaceMountPath(folderPath string) (string, error) {
 	// No `workspaceFolder` found in devcontainer.json - use default
 	devcontainerPath, err := getDefaultWorkspaceFolderForPath(folderPath)
 	if err != nil {
-		return "", fmt.Errorf("Error getting default workspace path: %s", err)
+		return "", fmt.Errorf("error getting default workspace path: %s", err)
 	}
 	return fmt.Sprintf("/workspaces/%s", devcontainerPath), nil
 }
@@ -90,7 +90,7 @@ func GetWorkspaceMountPath(folderPath string) (string, error) {
 func getWorkspaceMountPathFromDevcontainerDefinition(definition []byte) (string, error) {
 	r, err := regexp.Compile("(?m)^\\s*\"workspaceFolder\"\\s*:\\s*\"(.*)\"")
 	if err != nil {
-		return "", fmt.Errorf("Error compiling regex: %s", err)
+		return "", fmt.Errorf("error compiling regex: %s", err)
 	}
 	matches := r.FindSubmatch(definition)
 	if len(matches) == 2 {

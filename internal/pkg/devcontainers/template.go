@@ -2,13 +2,13 @@ package devcontainers
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 
+	"github.com/bradford-hamilton/dora/pkg/dora"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/config"
 	"github.com/stuartleeks/devcontainer-cli/internal/pkg/errors"
 	ioutil2 "github.com/stuartleeks/devcontainer-cli/internal/pkg/ioutil"
@@ -19,6 +19,12 @@ type DevcontainerTemplate struct {
 	Name string
 	// Path is the path including the .devcontainer folder
 	Path string
+}
+
+type SubstitutionValues struct {
+	Name       string
+	UserName   string
+	HomeFolder string
 }
 
 // GetTemplateByName returns the template with the specified name or nil if not found
@@ -72,7 +78,7 @@ func getTemplatesFromFolders(folders []string) ([]DevcontainerTemplate, error) {
 }
 
 func getTemplatesFromFolder(folder string) ([]DevcontainerTemplate, error) {
-	isDevcontainerFolder := func(parentPath string, fi os.FileInfo) bool {
+	isDevcontainerFolder := func(parentPath string, fi os.DirEntry) bool {
 		if !fi.IsDir() {
 			return false
 		}
@@ -81,10 +87,10 @@ func getTemplatesFromFolder(folder string) ([]DevcontainerTemplate, error) {
 		devContainerJsonInfo, err := os.Stat(devcontainerJsonPath)
 		return err == nil && !devContainerJsonInfo.IsDir()
 	}
-	c, err := ioutil.ReadDir(folder)
+	c, err := os.ReadDir(folder)
 
 	if err != nil {
-		return []DevcontainerTemplate{}, fmt.Errorf("Error reading devcontainer definitions: %s\n", err)
+		return []DevcontainerTemplate{}, fmt.Errorf("error reading devcontainer definitions: %s", err)
 	}
 
 	templates := []DevcontainerTemplate{}
@@ -115,7 +121,7 @@ func CopyTemplateToFolder(templatePath string, targetFolder string, devcontainer
 	var err error
 
 	if err = ioutil2.CopyFolder(templatePath, filepath.Join(targetFolder, ".devcontainer")); err != nil {
-		return fmt.Errorf("Error copying folder: %s\n", err)
+		return fmt.Errorf("error copying folder: %s", err)
 	}
 
 	// by default the "name" in devcontainer.json is set to the name of the template
@@ -123,22 +129,22 @@ func CopyTemplateToFolder(templatePath string, targetFolder string, devcontainer
 	if devcontainerName == "" {
 		devcontainerName, err = GetDefaultDevcontainerNameForFolder(targetFolder)
 		if err != nil {
-			return fmt.Errorf("Error getting default devcontainer name: %s", err)
+			return fmt.Errorf("error getting default devcontainer name: %s", err)
 		}
 	}
 	devcontainerJsonPath := filepath.Join(targetFolder, ".devcontainer", "devcontainer.json")
 	err = SetDevcontainerName(devcontainerJsonPath, devcontainerName)
 	if err != nil {
-		return fmt.Errorf("Error setting devcontainer name: %s", err)
+		return fmt.Errorf("error setting devcontainer name: %s", err)
 	}
 
 	values, err := getSubstitutionValuesFromFile(devcontainerJsonPath)
 	if err != nil {
-		return fmt.Errorf("Error getting substituion values: %s", err)
+		return fmt.Errorf("error getting substituion values: %s", err)
 	}
 	err = recursiveSubstituteValues(values, filepath.Join(targetFolder, ".devcontainer"))
 	if err != nil {
-		return fmt.Errorf("Error performing substitution: %s", err)
+		return fmt.Errorf("error performing substitution: %s", err)
 	}
 
 	return nil
@@ -147,12 +153,12 @@ func CopyTemplateToFolder(templatePath string, targetFolder string, devcontainer
 func recursiveSubstituteValues(values *SubstitutionValues, path string) error {
 	_, err := os.Stat(path)
 	if err != nil {
-		return fmt.Errorf("Error reading folder: %s\n", err)
+		return fmt.Errorf("error reading folder: %s", err)
 	}
 
-	subItems, err := ioutil.ReadDir(path)
+	subItems, err := os.ReadDir(path)
 	if err != nil {
-		return fmt.Errorf("Error reading source folder contents: %s\n", err)
+		return fmt.Errorf("error reading source folder contents: %s", err)
 	}
 
 	for _, subItem := range subItems {
@@ -175,7 +181,7 @@ func SetDevcontainerName(devContainerJsonPath string, name string) error {
 	// TODO - update this to use dora to query
 	// TODO - update this to replace __DEVCONTAINER_USER_NAME__ and __DEVCONTAINER_HOME__
 
-	buf, err := ioutil.ReadFile(devContainerJsonPath)
+	buf, err := os.ReadFile(devContainerJsonPath)
 	if err != nil {
 		return fmt.Errorf("error reading file %q: %s", devContainerJsonPath, err)
 	}
@@ -190,7 +196,7 @@ func SetDevcontainerName(devContainerJsonPath string, name string) error {
 	content = strings.ReplaceAll(content, "__DEVCONTAINER_NAME__", name)
 
 	buf = []byte(content)
-	if err = ioutil.WriteFile(devContainerJsonPath, buf, 0777); err != nil {
+	if err = os.WriteFile(devContainerJsonPath, buf, 0777); err != nil {
 		return fmt.Errorf("error writing file %q: %s", devContainerJsonPath, err)
 	}
 
@@ -199,7 +205,7 @@ func SetDevcontainerName(devContainerJsonPath string, name string) error {
 
 // "remoteUser": "vscode"
 func GetDevContainerUserName(devContainerJsonPath string) (string, error) {
-	buf, err := ioutil.ReadFile(devContainerJsonPath)
+	buf, err := os.ReadFile(devContainerJsonPath)
 	if err != nil {
 		return "", fmt.Errorf("error reading file %q: %s", devContainerJsonPath, err)
 	}
@@ -211,4 +217,56 @@ func GetDevContainerUserName(devContainerJsonPath string) (string, error) {
 		return "", nil
 	}
 	return match[1], nil
+}
+
+func getSubstitutionValuesFromFile(devContainerJsonPath string) (*SubstitutionValues, error) {
+	// This doesn't use standard `json` pkg as devcontainer.json permits comments (and the default templates include them!)
+
+	buf, err := os.ReadFile(devContainerJsonPath)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := dora.NewFromBytes(buf)
+	if err != nil {
+		return nil, err
+	}
+
+	name, err := c.GetString("$.name")
+	if err != nil {
+		name = ""
+	}
+	userName, err := c.GetString("$.remoteUser")
+	if err != nil {
+		userName = "root"
+	}
+	homeFolder := "/home/" + userName
+	if userName == "root" {
+		homeFolder = "/root"
+	}
+
+	return &SubstitutionValues{
+		Name:       name,
+		UserName:   userName,
+		HomeFolder: homeFolder,
+	}, nil
+}
+
+func performSubstitutionFile(substitutionValues *SubstitutionValues, filename string) error {
+	buf, err := os.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	content := string(buf)
+	content = performSubstitutionString(substitutionValues, content)
+	err = os.WriteFile(filename, []byte(content), 0)
+	return err
+}
+
+func performSubstitutionString(substitutionValues *SubstitutionValues, content string) string {
+	// replace __DEVCONTAINER_NAME__ with name etc
+	content = strings.ReplaceAll(content, "__DEVCONTAINER_NAME__", substitutionValues.Name)
+	content = strings.ReplaceAll(content, "__DEVCONTAINER_USER_NAME__", substitutionValues.UserName)
+	content = strings.ReplaceAll(content, "__DEVCONTAINER_HOME__", substitutionValues.HomeFolder)
+	return content
 }

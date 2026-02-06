@@ -19,7 +19,7 @@ func ConvertWslPathToWindowsPath(path string) (string, error) {
 
 	buf, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("Error running wslpath (for %q): %s", path, err)
+		return "", fmt.Errorf("error running wslpath (for %q): %s", path, err)
 	}
 	return strings.TrimSpace(string(buf)), nil
 }
@@ -30,7 +30,7 @@ func ConvertWindowsPathToWslPath(path string) (string, error) {
 
 	buf, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("Error running wslpath (for %q): %s", path, err)
+		return "", fmt.Errorf("error running wslpath (for %q): %s", path, err)
 	}
 	return strings.TrimSpace(string(buf)), nil
 }
